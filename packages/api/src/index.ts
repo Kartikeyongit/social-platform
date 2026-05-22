@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
@@ -14,6 +15,7 @@ import jwt from 'jsonwebtoken';
 import { typeDefs } from './graphql/typeDefs';
 import { resolvers } from './graphql/resolvers';
 import { upload } from './utils/upload';
+import { uploadToCloudinary } from './utils/cloudinary';
 
 const prisma = new PrismaClient();
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
@@ -30,31 +32,16 @@ async function startServer() {
 
   app.use(cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        process.env.CORS_ORIGIN,
-        'http://localhost:3000',
-      ].filter(Boolean);
-      
+      const allowedOrigins = [process.env.CORS_ORIGIN, 'http://localhost:3000'].filter(Boolean);
       if (!origin) return callback(null, true);
-      
-      if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') {
-        return callback(null, true);
-      }
-      
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
+      if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
   }));
 
-  const wsServer = new WebSocketServer({
-    server: httpServer,
-    path: '/graphql',
-  });
-
+  const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql' });
   const schema = makeExecutableSchema({ typeDefs, resolvers });
   const serverCleanup = useServer({ 
     schema,
@@ -72,26 +59,37 @@ async function startServer() {
 
   const server = new ApolloServer<Context>({
     schema,
-    plugins: [
-      ApolloServerPluginDrainHttpServer({ httpServer }),
-      {
-        async serverWillStart() {
-          return { async drainServer() { await serverCleanup.dispose(); } };
-        },
-      },
-    ],
+    plugins: [ApolloServerPluginDrainHttpServer({ httpServer }), {
+      async serverWillStart() { return { async drainServer() { await serverCleanup.dispose(); } }; },
+    }],
   });
 
   await server.start();
   app.use(express.json());
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+  // Image upload endpoint - uses Cloudinary in production, local in dev
   app.post('/upload', (req, res) => {
-    upload.single('image')(req, res, (err) => {
+    upload.single('image')(req, res, async (err) => {
       if (err) return res.status(400).json({ error: err.message });
-      if (!req.file) return res.status(400).json({ error: 'No file' });
-      const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-      return res.json({ url });
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+      try {
+        let url: string;
+        
+        // Check if Cloudinary is configured
+        if (process.env.CLOUDINARY_CLOUD_NAME) {
+          url = await uploadToCloudinary(req.file.path);
+          // Clean up local file after upload
+          fs.unlink(req.file.path, () => {});
+        } else {
+          // Fallback to local URL for development
+          url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        }
+        
+        return res.json({ url });
+      } catch (error: any) {
+        return res.status(500).json({ error: error.message || 'Upload failed' });
+      }
     });
   });
 
