@@ -28,10 +28,8 @@ async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
 
-  // Allow Vercel preview URLs and production
   app.use(cors({
     origin: (origin, callback) => {
-      // Allow localhost, vercel URLs, and the configured CORS_ORIGIN
       const allowedOrigins = [
         process.env.CORS_ORIGIN,
         'http://localhost:3000',
@@ -39,7 +37,6 @@ async function startServer() {
       
       if (!origin) return callback(null, true);
       
-      // Allow all vercel.app subdomains
       if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') {
         return callback(null, true);
       }
@@ -111,7 +108,7 @@ async function startServer() {
     },
   }));
 
-  const PORT = process.env.PORT || 4000;
+  const PORT = parseInt(process.env.PORT || '4000', 10);
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server ready on port ${PORT}`);
   });
