@@ -330,6 +330,10 @@ export const resolvers = {
       });
       if (!existing) {
         await prisma.follow.create({ data: { followerId: userId, followingId: targetUserId } });
+        // CREATE NOTIFICATION
+        await prisma.notification.create({
+          data: { userId: targetUserId, type: 'FOLLOW', actorId: userId, entityId: userId },
+        });
       }
       return prisma.user.findUnique({ where: { id: targetUserId } });
     },
