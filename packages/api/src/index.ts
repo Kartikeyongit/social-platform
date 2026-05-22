@@ -28,7 +28,24 @@ async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
 
-  // WebSocket server for subscriptions
+  const allowedOrigins = [
+    process.env.CORS_ORIGIN,
+    'http://localhost:3000',
+    'https://social-platform.vercel.app',
+  ].filter(Boolean);
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  }));
+
+  // Rest of your server code...
   const wsServer = new WebSocketServer({
     server: httpServer,
     path: '/graphql',
@@ -43,86 +60,55 @@ async function startServer() {
         try {
           const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string };
           return { userId: decoded.userId, prisma, redis };
-        } catch (e) {
-          throw new Error('Invalid token');
-        }
+        } catch (e) {}
       }
       return { prisma, redis };
     },
   }, wsServer);
 
-  // Apollo Server
   const server = new ApolloServer<Context>({
     schema,
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       {
         async serverWillStart() {
-          return {
-            async drainServer() {
-              await serverCleanup.dispose();
-            },
-          };
+          return { async drainServer() { await serverCleanup.dispose(); } };
         },
       },
     ],
   });
 
   await server.start();
-
-  // Middleware
-  app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true,
-  }));
   app.use(express.json());
-  
-  // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-  // Image upload endpoint
   app.post('/upload', (req, res) => {
     upload.single('image')(req, res, (err) => {
-      if (err) {
-        console.error('Upload error:', err);
-        return res.status(400).json({ error: err.message || 'Upload failed' });
-      }
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file provided' });
-      }
-      const url = `http://localhost:4000/uploads/${req.file.filename}`;
-      console.log('File uploaded:', url);
+      if (err) return res.status(400).json({ error: err.message });
+      if (!req.file) return res.status(400).json({ error: 'No file' });
+      const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
       return res.json({ url });
     });
   });
 
-  app.use(
-    '/graphql',
-    expressMiddleware(server, {
-      context: async ({ req }) => {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (token) {
-          try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string };
-            return { userId: decoded.userId, prisma, redis };
-          } catch (e) {
-            // Invalid token
-          }
-        }
-        return { prisma, redis };
-      },
-    })
-  );
+  app.use('/graphql', expressMiddleware(server, {
+    context: async ({ req }) => {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string };
+          return { userId: decoded.userId, prisma, redis };
+        } catch (e) {}
+      }
+      return { prisma, redis };
+    },
+  }));
 
   const PORT = process.env.PORT || 4000;
-  
   httpServer.listen(PORT, () => {
-    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
-    console.log(`📡 WebSocket ready at ws://localhost:${PORT}/graphql`);
-    console.log(`📸 Image upload ready at http://localhost:${PORT}/upload`);
+    console.log(`🚀 Server ready on port ${PORT}`);
+    console.log(`📡 CORS origins: ${allowedOrigins.join(', ')}`);
   });
 }
 
-startServer().catch((error) => {
-  console.error('Failed to start server:', error);
-});
+startServer().catch(console.error);
