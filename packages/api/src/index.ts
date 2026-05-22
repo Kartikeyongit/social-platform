@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
-import fs from 'fs';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
@@ -34,8 +33,7 @@ async function startServer() {
       if (!origin) return callback(null, true);
       if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') return callback(null, true);
       if (origin === 'http://localhost:3000') return callback(null, true);
-      if (origin === process.env.CORS_ORIGIN) return callback(null, true);
-      callback(null, true); // Allow all for now
+      callback(null, true);
     },
     credentials: true,
   }));
@@ -60,7 +58,7 @@ async function startServer() {
   await server.start();
   app.use(express.json());
 
-  // Upload endpoint with Cloudinary
+  // Upload endpoint - uses memory storage + Cloudinary
   app.post('/upload', (req, res) => {
     upload.single('image')(req, res, async (err) => {
       if (err) {
@@ -72,21 +70,28 @@ async function startServer() {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      console.log('File received:', req.file.originalname, 'Size:', req.file.size);
+      console.log('File received:', req.file.originalname, 'Type:', req.file.mimetype, 'Size:', req.file.size);
 
       try {
-        // Upload to Cloudinary
-        const url = await uploadToCloudinary(req.file.path);
-        console.log('Cloudinary URL:', url);
+        // Upload buffer to Cloudinary using base64 data URI
+        const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        const cloudinary = require('cloudinary').v2;
         
-        // Clean up temp file
-        fs.unlink(req.file.path, () => {});
-        
-        return res.json({ url });
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dibovl6kv',
+          api_key: process.env.CLOUDINARY_API_KEY || '271466534784918',
+          api_secret: process.env.CLOUDINARY_API_SECRET || 'k5si7SFQPtlxKjIVT6CJTfmfF4M',
+        });
+
+        const result = await cloudinary.uploader.upload(base64, {
+          folder: 'social-app',
+          transformation: [{ width: 1200, height: 1200, crop: 'limit', quality: 'auto' }],
+        });
+
+        console.log('Cloudinary success:', result.secure_url);
+        return res.json({ url: result.secure_url });
       } catch (error: any) {
         console.error('Cloudinary error:', error.message);
-        // Clean up temp file on error too
-        fs.unlink(req.file.path, () => {});
         return res.status(500).json({ error: 'Upload failed: ' + error.message });
       }
     });
