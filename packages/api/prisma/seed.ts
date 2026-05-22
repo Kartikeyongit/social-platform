@@ -3,7 +3,29 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const samplePosts = [
+const all100Posts = [
+  // Original 20 posts
+  { content: 'Just deployed my new Next.js app! #nextjs #webdev #react', hashtags: ['nextjs','webdev','react'], mediaUrls: ['https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=400&fit=crop'] },
+  { content: 'Golden hour at the beach today 🌅 #photography #nature #sunset', hashtags: ['photography','nature','sunset'], mediaUrls: ['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=400&fit=crop'] },
+  { content: 'Unboxed the new MacBook Pro M4! #apple #tech #macbook', hashtags: ['apple','tech','macbook'], mediaUrls: ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&h=400&fit=crop'] },
+  { content: 'Building real-time chat with WebSockets #coding #backend #websocket', hashtags: ['coding','backend','websocket'], mediaUrls: ['https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=400&fit=crop'] },
+  { content: 'My latest digital painting complete! #digitalart #illustration #art', hashtags: ['digitalart','illustration','art'], mediaUrls: ['https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=800&h=400&fit=crop'] },
+  { content: 'TypeScript 5.5 is amazing! #typescript #javascript #programming', hashtags: ['typescript','javascript','programming'], mediaUrls: ['https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&h=400&fit=crop'] },
+  { content: 'New dashboard UI design #uidesign #ux #design', hashtags: ['uidesign','ux','design'], mediaUrls: ['https://images.unsplash.com/photo-1559028012-481c04fa702d?w=800&h=400&fit=crop'] },
+  { content: 'Morning coffee + coding = perfect day ☕ #graphql #api #morningroutine', hashtags: ['graphql','api','morningroutine'], mediaUrls: ['https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&h=400&fit=crop'] },
+  { content: 'Hiking in the mountains this weekend! #hiking #adventure #mountains', hashtags: ['hiking','adventure','mountains'], mediaUrls: ['https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=400&fit=crop'] },
+  { content: 'Building scalable microservices with Node.js #nodejs #microservices #backend', hashtags: ['nodejs','microservices','backend'], mediaUrls: ['https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=800&h=400&fit=crop'] },
+  { content: 'City lights at night are magical #cityphotography #nightlife #urban', hashtags: ['cityphotography','nightlife','urban'], mediaUrls: ['https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&h=400&fit=crop'] },
+  { content: 'Docker makes deployment so easy! #docker #devops #deployment', hashtags: ['docker','devops','deployment'], mediaUrls: ['https://images.unsplash.com/photo-1605745341112-85968b19335b?w=800&h=400&fit=crop'] },
+  { content: 'Color palette generator for designers #designtools #colorpalette #webdev', hashtags: ['designtools','colorpalette','webdev'], mediaUrls: ['https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=800&h=400&fit=crop'] },
+  { content: 'Working from a cozy café today ☕ #remotework #cafe #productivity', hashtags: ['remotework','cafe','productivity'], mediaUrls: ['https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&h=400&fit=crop'] },
+  { content: 'New lens just arrived! #photography #gear #camera', hashtags: ['photography','gear','camera'], mediaUrls: ['https://images.unsplash.com/photo-1452780212940-6f5c0d14d848?w=800&h=400&fit=crop'] },
+  { content: 'Gave a talk on AI in web development! #techmeetup #ai #webdev', hashtags: ['techmeetup','ai','webdev'], mediaUrls: ['https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=400&fit=crop'] },
+  { content: 'Refactored 5000 lines of legacy code 😅 #refactoring #cleancode #programming', hashtags: ['refactoring','cleancode','programming'], mediaUrls: ['https://images.unsplash.com/photo-1551033406-611cf9a28f67?w=800&h=400&fit=crop'] },
+  { content: 'New design system components ready! #designsystem #uidesign #accessibility', hashtags: ['designsystem','uidesign','accessibility'], mediaUrls: ['https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=400&fit=crop'] },
+  { content: 'Sunset coding session on the rooftop 🌇 #codinglife #sunset #developer', hashtags: ['codinglife','sunset','developer'], mediaUrls: ['https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=800&h=400&fit=crop'] },
+  { content: 'Planning trip to Japan! Any tips? 🇯🇵 #travel #japan #tech', hashtags: ['travel','japan','tech'], mediaUrls: ['https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&h=400&fit=crop'] },
+  // Additional 80 posts
   { content: 'React Server Components are a game changer! #react #nextjs #webdev', hashtags: ['react','nextjs','webdev'], mediaUrls: ['https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=400&fit=crop'] },
   { content: 'Beautiful sunrise at the lake today 🌅 #photography #nature #landscape', hashtags: ['photography','nature','landscape'], mediaUrls: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&h=400&fit=crop'] },
   { content: 'Tailwind CSS makes styling so much fun! #tailwind #css #frontend', hashtags: ['tailwind','css','frontend'], mediaUrls: ['https://images.unsplash.com/photo-1618477388954-7852f32655ec?w=800&h=400&fit=crop'] },
@@ -87,64 +109,66 @@ const samplePosts = [
 ];
 
 async function main() {
-  console.log('🌱 Seeding 80 additional posts...');
+  console.log('🌱 Seeding 100 posts with 5 users...');
 
   const passwordHash = await bcrypt.hash('password123', 10);
 
-  // Ensure users exist
+  // Create/update users
   const users = await Promise.all([
-    prisma.user.upsert({ where: { email: 'john@example.com' }, update: {}, create: { username: 'john_doe', email: 'john@example.com', passwordHash, displayName: 'John Doe', bio: 'Full-stack developer & coffee enthusiast.', avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face' } }),
-    prisma.user.upsert({ where: { email: 'jane@example.com' }, update: {}, create: { username: 'jane_smith', email: 'jane@example.com', passwordHash, displayName: 'Jane Smith', bio: 'Digital artist & photographer.', avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face' } }),
-    prisma.user.upsert({ where: { email: 'tech@example.com' }, update: {}, create: { username: 'tech_guru', email: 'tech@example.com', passwordHash, displayName: 'Tech Guru', bio: 'Tech reviewer & gadget lover.', avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face' } }),
-    prisma.user.upsert({ where: { email: 'sarah@example.com' }, update: {}, create: { username: 'sarah_codes', email: 'sarah@example.com', passwordHash, displayName: 'Sarah Codes', bio: 'Frontend engineer passionate about React.', avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face' } }),
-    prisma.user.upsert({ where: { email: 'mike@example.com' }, update: {}, create: { username: 'mike_designs', email: 'mike@example.com', passwordHash, displayName: 'Mike Designs', bio: 'UI/UX designer.', avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face' } }),
+    prisma.user.upsert({ where: { email: 'john@example.com' }, update: { avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face' }, create: { username: 'john_doe', email: 'john@example.com', passwordHash, displayName: 'John Doe', bio: 'Full-stack developer & coffee enthusiast.', avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face' } }),
+    prisma.user.upsert({ where: { email: 'jane@example.com' }, update: { avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face' }, create: { username: 'jane_smith', email: 'jane@example.com', passwordHash, displayName: 'Jane Smith', bio: 'Digital artist & photographer.', avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face' } }),
+    prisma.user.upsert({ where: { email: 'tech@example.com' }, update: { avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face' }, create: { username: 'tech_guru', email: 'tech@example.com', passwordHash, displayName: 'Tech Guru', bio: 'Tech reviewer & gadget lover.', avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face' } }),
+    prisma.user.upsert({ where: { email: 'sarah@example.com' }, update: { avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face' }, create: { username: 'sarah_codes', email: 'sarah@example.com', passwordHash, displayName: 'Sarah Codes', bio: 'Frontend engineer passionate about React.', avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face' } }),
+    prisma.user.upsert({ where: { email: 'mike@example.com' }, update: { avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face' }, create: { username: 'mike_designs', email: 'mike@example.com', passwordHash, displayName: 'Mike Designs', bio: 'UI/UX designer.', avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face' } }),
   ]);
 
-  // Make John follow everyone
   const john = users[0];
+
+  // Make John follow everyone, and everyone follow John
   for (const user of users) {
     if (user.id !== john.id) {
-      await prisma.follow.upsert({
-        where: { followerId_followingId: { followerId: john.id, followingId: user.id } },
-        update: {},
-        create: { followerId: john.id, followingId: user.id },
-      });
+      await prisma.follow.upsert({ where: { followerId_followingId: { followerId: john.id, followingId: user.id } }, update: {}, create: { followerId: john.id, followingId: user.id } });
+      await prisma.follow.upsert({ where: { followerId_followingId: { followerId: user.id, followingId: john.id } }, update: {}, create: { followerId: user.id, followingId: john.id } });
     }
   }
 
-  // Create 80 posts distributed among users
-  let createdCount = 0;
-  for (let i = 0; i < 80; i++) {
-    const postTemplate = samplePosts[i % samplePosts.length];
+  // Clear existing posts and create all 100
+  await prisma.like.deleteMany();
+  await prisma.comment.deleteMany();
+  await prisma.post.deleteMany();
+  await prisma.hashtag.deleteMany();
+
+  let count = 0;
+  for (let i = 0; i < all100Posts.length; i++) {
+    const post = all100Posts[i];
     const author = users[i % users.length];
-    
     await prisma.post.create({
       data: {
-        content: postTemplate.content,
-        hashtags: postTemplate.hashtags,
-        mediaUrls: postTemplate.mediaUrls,
+        content: post.content,
+        hashtags: post.hashtags,
+        mediaUrls: post.mediaUrls,
         authorId: author.id,
         likeCount: Math.floor(Math.random() * 150) + 5,
         commentCount: Math.floor(Math.random() * 30) + 1,
       },
     });
-    createdCount++;
+    count++;
   }
 
-  // Update hashtag counts
-  const allTags = new Set(samplePosts.flatMap(p => p.hashtags));
+  // Update hashtags
+  const allTags = new Set(all100Posts.flatMap(p => p.hashtags));
   for (const tag of allTags) {
-    const count = await prisma.post.count({ where: { hashtags: { has: tag } } });
-    await prisma.hashtag.upsert({
-      where: { name: tag },
-      update: { postCount: count },
-      create: { name: tag, postCount: count },
-    });
+    const tagCount = all100Posts.filter(p => p.hashtags.includes(tag)).length;
+    await prisma.hashtag.upsert({ where: { name: tag }, update: { postCount: tagCount }, create: { name: tag, postCount: tagCount } });
   }
 
-  console.log(`✅ Added ${createdCount} new posts!`);
-  console.log(`👤 John follows ${users.length - 1} users`);
-  console.log(`🏷️ ${allTags.size} hashtags updated`);
+  console.log(`✅ Seeded: ${users.length} users, ${count} posts, ${allTags.size} hashtags`);
+  console.log('📝 Test accounts:');
+  console.log('   john@example.com / password123');
+  console.log('   jane@example.com / password123');
+  console.log('   tech@example.com / password123');
+  console.log('   sarah@example.com / password123');
+  console.log('   mike@example.com / password123');
 }
 
 main().catch(e => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
