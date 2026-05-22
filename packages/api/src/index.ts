@@ -28,24 +28,31 @@ async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
 
-  const allowedOrigins = [
-    process.env.CORS_ORIGIN,
-    'http://localhost:3000',
-    'https://social-platform.vercel.app',
-  ].filter(Boolean);
-
+  // Allow Vercel preview URLs and production
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+      // Allow localhost, vercel URLs, and the configured CORS_ORIGIN
+      const allowedOrigins = [
+        process.env.CORS_ORIGIN,
+        'http://localhost:3000',
+      ].filter(Boolean);
+      
+      if (!origin) return callback(null, true);
+      
+      // Allow all vercel.app subdomains
+      if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') {
+        return callback(null, true);
       }
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
   }));
 
-  // Rest of your server code...
   const wsServer = new WebSocketServer({
     server: httpServer,
     path: '/graphql',
@@ -105,9 +112,8 @@ async function startServer() {
   }));
 
   const PORT = process.env.PORT || 4000;
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server ready on port ${PORT}`);
-    console.log(`📡 CORS origins: ${allowedOrigins.join(', ')}`);
   });
 }
 
