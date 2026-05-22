@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
-import path from 'path';
 import fs from 'fs';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
@@ -32,30 +31,24 @@ async function startServer() {
 
   app.use(cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [process.env.CORS_ORIGIN, 'http://localhost:3000'].filter(Boolean);
       if (!origin) return callback(null, true);
       if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error('Not allowed by CORS'));
+      if (origin === 'http://localhost:3000') return callback(null, true);
+      if (origin === process.env.CORS_ORIGIN) return callback(null, true);
+      callback(null, true); // Allow all for now
     },
     credentials: true,
   }));
 
   const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql' });
   const schema = makeExecutableSchema({ typeDefs, resolvers });
-  const serverCleanup = useServer({ 
-    schema,
-    context: async (ctx) => {
-      const token = ctx.connectionParams?.authToken as string;
-      if (token) {
-        try {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string };
-          return { userId: decoded.userId, prisma, redis };
-        } catch (e) {}
-      }
-      return { prisma, redis };
-    },
-  }, wsServer);
+  const serverCleanup = useServer({ schema, context: async (ctx) => {
+    const token = ctx.connectionParams?.authToken as string;
+    if (token) {
+      try { const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string }; return { userId: decoded.userId, prisma, redis }; } catch (e) {}
+    }
+    return { prisma, redis };
+  }}, wsServer);
 
   const server = new ApolloServer<Context>({
     schema,
@@ -67,28 +60,34 @@ async function startServer() {
   await server.start();
   app.use(express.json());
 
-  // Image upload endpoint - uses Cloudinary in production, local in dev
+  // Upload endpoint with Cloudinary
   app.post('/upload', (req, res) => {
     upload.single('image')(req, res, async (err) => {
-      if (err) return res.status(400).json({ error: err.message });
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      if (err) {
+        console.error('Multer error:', err.message);
+        return res.status(400).json({ error: err.message });
+      }
+      if (!req.file) {
+        console.error('No file received');
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      console.log('File received:', req.file.originalname, 'Size:', req.file.size);
 
       try {
-        let url: string;
+        // Upload to Cloudinary
+        const url = await uploadToCloudinary(req.file.path);
+        console.log('Cloudinary URL:', url);
         
-        // Check if Cloudinary is configured
-        if (process.env.CLOUDINARY_CLOUD_NAME) {
-          url = await uploadToCloudinary(req.file.path);
-          // Clean up local file after upload
-          fs.unlink(req.file.path, () => {});
-        } else {
-          // Fallback to local URL for development
-          url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        }
+        // Clean up temp file
+        fs.unlink(req.file.path, () => {});
         
         return res.json({ url });
       } catch (error: any) {
-        return res.status(500).json({ error: error.message || 'Upload failed' });
+        console.error('Cloudinary error:', error.message);
+        // Clean up temp file on error too
+        fs.unlink(req.file.path, () => {});
+        return res.status(500).json({ error: 'Upload failed: ' + error.message });
       }
     });
   });
@@ -97,19 +96,14 @@ async function startServer() {
     context: async ({ req }) => {
       const token = req.headers.authorization?.split(' ')[1];
       if (token) {
-        try {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string };
-          return { userId: decoded.userId, prisma, redis };
-        } catch (e) {}
+        try { const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string }; return { userId: decoded.userId, prisma, redis }; } catch (e) {}
       }
       return { prisma, redis };
     },
   }));
 
   const PORT = parseInt(process.env.PORT || '4000', 10);
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server ready on port ${PORT}`);
-  });
+  httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));
 }
 
 startServer().catch(console.error);
