@@ -1,0 +1,13 @@
+{
+  "name": "social-platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @social/api dev\" \"pnpm --filter @social/web dev\"",
+    "build": "pnpm --filter @social/shared build && pnpm --filter @social/api build && pnpm --filter @social/web build",
+    "setup": "docker-compose up -d && pnpm install && pnpm --filter @social/api db:migrate && pnpm --filter @social/api db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

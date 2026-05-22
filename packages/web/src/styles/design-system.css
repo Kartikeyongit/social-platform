@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+    font-size: 14px;
+  }
+
+  .dark body {
+    @apply bg-dark-0 text-slate-200;
+  }
+}
+
+@layer components {
+  .btn-premium {
+    @apply relative inline-flex items-center justify-center px-5 py-2.5 
+           text-sm font-semibold rounded-full transition-all duration-300
+           focus:outline-none focus:ring-2 focus:ring-brand-500/50
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transform active:scale-95;
+  }
+
+  .btn-primary-premium {
+    @apply btn-premium bg-brand-600 text-white 
+           hover:bg-brand-700 hover:shadow-glow
+           active:bg-brand-800;
+  }
+
+  .btn-secondary-premium {
+    @apply btn-premium bg-white text-slate-700 border-2 border-slate-200
+           hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50
+           dark:bg-dark-50 dark:text-slate-200 dark:border-dark-100
+           dark:hover:border-brand-600 dark:hover:bg-dark-100;
+  }
+
+  .btn-ghost-premium {
+    @apply btn-premium text-slate-600 hover:bg-slate-100 hover:text-slate-900
+           dark:text-slate-400 dark:hover:bg-dark-50 dark:hover:text-slate-200;
+  }
+
+  .card-premium {
+    @apply bg-white/90 backdrop-blur-sm rounded-3xl border border-slate-200/40
+           shadow-soft hover:shadow-lg transition-all duration-300
+           dark:bg-dark-50/90 dark:border-dark-100/40;
+  }
+
+  .input-premium {
+    @apply w-full px-4 py-3 bg-slate-50/80 backdrop-blur-sm border-2 border-slate-200/60
+           rounded-2xl text-sm placeholder:text-slate-400
+           focus:outline-none focus:border-brand-500 focus:bg-white
+           transition-all duration-200
+           dark:bg-dark-50/80 dark:border-dark-100/60 dark:text-slate-200
+           dark:placeholder:text-slate-500 dark:focus:border-brand-500 dark:focus:bg-dark-0;
+  }
+
+  .tag-premium {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-brand-50/80 backdrop-blur-sm text-brand-700 border border-brand-200/40
+           hover:bg-brand-100 transition-colors duration-200
+           dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800/40;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-600 to-blue-600 bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-lg;
+  }
+
+  .dark .glass {
+    @apply bg-dark-50/80 border-dark-100/20;
+  }
+
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/30 shadow-soft
+           dark:bg-dark-50/70 dark:border-dark-100/30;
+  }
+
+  .hover-card {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
