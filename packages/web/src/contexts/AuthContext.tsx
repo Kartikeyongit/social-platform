@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { client } from '@/graphql/client';
 
@@ -16,12 +16,14 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, token: null, login: () => {}, logout: () => {}, isAuthenticated: false, loading: true,
+  user: null, token: null, login: () => {}, logout: () => {}, refreshUser: async () => {},
+  isAuthenticated: false, loading: true,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -34,27 +36,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      setToken(storedToken);
-      fetchUser(storedToken);
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchUser = async (authToken: string) => {
+  const fetchUser = useCallback(async (authToken: string) => {
     try {
       const response = await fetch(`${API_URL}/graphql`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          query: `query Me { me { id username displayName email avatarUrl bio } }`,
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ query: `query Me { me { id username displayName email avatarUrl bio } }` }),
       });
       const { data } = await response.json();
       if (data?.me) setUser(data.me);
@@ -64,7 +51,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) { setToken(storedToken); fetchUser(storedToken); }
+    else setLoading(false);
+  }, [fetchUser]);
 
   const login = (newToken: string, userData: User) => {
     localStorage.setItem('token', newToken);
@@ -81,8 +74,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     router.push('/login');
   };
 
+  const refreshUser = async () => {
+    if (token) await fetchUser(token);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isAuthenticated: !!token, loading }}>
       {children}
     </AuthContext.Provider>
   );

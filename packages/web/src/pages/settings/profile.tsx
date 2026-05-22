@@ -15,7 +15,7 @@ const UPDATE_PROFILE = gql`
 `;
 
 export default function EditProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const router = useRouter();
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
@@ -24,7 +24,11 @@ export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [updateProfile, { loading }] = useMutation(UPDATE_PROFILE, {
-    onCompleted: () => { toast.success('Profile updated!'); router.back(); },
+    onCompleted: async () => {
+      await refreshUser(); // Refresh the user data in context
+      toast.success('Profile updated!');
+      router.back();
+    },
     onError: (error) => toast.error(error.message),
   });
 
