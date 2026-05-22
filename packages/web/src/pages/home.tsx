@@ -16,22 +16,12 @@ const GET_FEED = gql`
     feed(limit: $limit, cursor: $cursor) {
       edges {
         node {
-          id
-          content
-          mediaUrls
-          hashtags
-          likeCount
-          commentCount
-          isLiked
-          createdAt
+          id content mediaUrls hashtags likeCount commentCount isLiked createdAt
           author { id username displayName avatarUrl }
         }
         cursor
       }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
+      pageInfo { hasNextPage endCursor }
     }
   }
 `;
@@ -76,112 +66,82 @@ export default function HomePage() {
   const [burstingPosts, setBurstingPosts] = useState<Set<string>>(new Set());
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [allPosts, setAllPosts] = useState<any[]>([]);
+  const [currentCursor, setCurrentCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  // Use manual state management instead of relying solely on onCompleted
   const { data, loading, fetchMore, refetch } = useQuery(GET_FEED, {
     variables: { limit: POSTS_PER_PAGE },
     fetchPolicy: 'network-only',
     onCompleted: (newData) => {
-      console.log('📦 onCompleted:', newData?.feed?.pageInfo);
       if (newData?.feed?.edges) {
         const newPosts = newData.feed.edges.map((e:any) => e.node);
         setAllPosts(prev => {
           const existingIds = new Set(prev.map(p => p.id));
-          const uniqueNew = newPosts.filter((p:any) => !existingIds.has(p.id));
-          console.log(`➕ Adding ${uniqueNew.length} posts, total ${prev.length + uniqueNew.length}`);
-          return [...prev, ...uniqueNew];
+          return [...prev, ...newPosts.filter((p:any) => !existingIds.has(p.id))];
         });
+        setHasMore(newData.feed.pageInfo.hasNextPage);
+        if (newData.feed.pageInfo.endCursor) {
+          setCurrentCursor(newData.feed.pageInfo.endCursor);
+        }
       }
     },
   });
 
   const [createPost] = useMutation(CREATE_POST, {
-    onCompleted: () => {
-      setContent(''); setMediaUrls([]); setSuggestions([]); setIsPosting(false);
-      setAllPosts([]);
-      refetch();
-      toast.success('Posted!');
-    },
-    onError: () => { setIsPosting(false); toast.error('Failed'); },
+    onCompleted: () => { setContent(''); setMediaUrls([]); setSuggestions([]); setIsPosting(false); setAllPosts([]); setCurrentCursor(null); refetch(); toast.success('Posted!'); },
+    onError: () => { setIsPosting(false); toast.error('Failed to create post'); },
   });
 
-  const [getSuggestions] = useLazyQuery(SUGGEST_HASHTAGS, {
-    onCompleted: (d) => setSuggestions(d.suggestHashtags || []),
-  });
-
+  const [getSuggestions] = useLazyQuery(SUGGEST_HASHTAGS, { onCompleted: (d) => setSuggestions(d.suggestHashtags || []) });
   const [likePost] = useMutation(LIKE_POST);
   const [unlikePost] = useMutation(UNLIKE_POST);
   const [createComment] = useMutation(CREATE_COMMENT);
 
   useEffect(() => {
-    if (content.length > 3) {
-      const t = setTimeout(() => getSuggestions({ variables: { content } }), 600);
-      return () => clearTimeout(t);
-    } else setSuggestions([]);
+    if (content.length > 3) { const t = setTimeout(() => getSuggestions({ variables: { content } }), 600); return () => clearTimeout(t); }
+    else setSuggestions([]);
   }, [content]);
 
-  // Load more - manually extract data from fetchMore result
   const loadMore = async () => {
-    const endCursor = data?.feed?.pageInfo?.endCursor;
-    const hasNext = data?.feed?.pageInfo?.hasNextPage;
-    console.log('🔄 loadMore called. hasNext:', hasNext, 'endCursor:', endCursor);
-    if (!hasNext || !endCursor || isLoadingMore || loading) return;
+    if (!hasMore || !currentCursor || isLoadingMore || loading) return;
     setIsLoadingMore(true);
     try {
       const result = await fetchMore({
-        variables: { limit: POSTS_PER_PAGE, cursor: endCursor },
+        variables: { limit: POSTS_PER_PAGE, cursor: currentCursor },
       });
-      console.log('📥 fetchMore result:', result.data?.feed?.pageInfo);
-      // Manually add posts from the result
       if (result.data?.feed?.edges) {
         const newPosts = result.data.feed.edges.map((e:any) => e.node);
-        setAllPosts(prev => {
-          const existingIds = new Set(prev.map(p => p.id));
-          const uniqueNew = newPosts.filter((p:any) => !existingIds.has(p.id));
-          console.log(`➕ Manual add: ${uniqueNew.length} posts`);
-          return [...prev, ...uniqueNew];
-        });
+        setAllPosts(prev => { const ids = new Set(prev.map(p=>p.id)); return [...prev, ...newPosts.filter((p:any)=>!ids.has(p.id))]; });
+        setHasMore(result.data.feed.pageInfo.hasNextPage);
+        if (result.data.feed.pageInfo.endCursor) {
+          setCurrentCursor(result.data.feed.pageInfo.endCursor);
+        }
       }
-    } catch (e) {
-      console.error('fetchMore error:', e);
-    } finally {
-      setIsLoadingMore(false);
-    }
+    } catch (e) {}
+    finally { setIsLoadingMore(false); }
   };
 
-  // Intersection Observer
   useEffect(() => {
-    const el = loaderRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          console.log('👀 Observer triggered');
-          loadMore();
-        }
-      },
-      { rootMargin: '300px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [data?.feed?.pageInfo?.endCursor, data?.feed?.pageInfo?.hasNextPage, loading, isLoadingMore]);
+    const el = loaderRef.current; if (!el) return;
+    const observer = new IntersectionObserver((entries) => { if (entries[0].isIntersecting) loadMore(); }, { rootMargin: '300px' });
+    observer.observe(el); return () => observer.disconnect();
+  }, [currentCursor, hasMore, loading, isLoadingMore]);
 
-  // ... handlers (same as before)
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setIsUploading(true); const fd = new FormData(); fd.append('image', file);
     try { const r = await fetch(`${API_URL}/upload`, { method:'POST', body:fd }); const d = await r.json(); if (d.url) setMediaUrls([...mediaUrls, d.url]); }
     catch { toast.error('Upload failed'); } finally { setIsUploading(false); }
   };
+
   const addHashtag = (tag: string) => { if (!content.includes(`#${tag}`)) setContent(content+` #${tag}`); setSuggestions([]); };
-  const handleCreatePost = async (e: React.FormEvent) => { e.preventDefault(); if (!content.trim()||isPosting) return; setIsPosting(true); const tags = content.match(/#(\w+)/g)?.map(t=>t.slice(1))||[]; await createPost({ variables:{ input:{ content, hashtags: tags, mediaUrls } } }); };
-  const handleLike = async (postId:string, isLiked:boolean) => { isLiked ? await unlikePost({variables:{postId}}) : await likePost({variables:{postId}}); setLikedPosts(p=>{const n=new Set(p); n.delete(postId); return n;}); };
-  const handleComment = async (postId:string) => { const c=commentInputs[postId]; if(!c?.trim()) return; await createComment({variables:{input:{postId, content:c}}}); setCommentInputs({...commentInputs,[postId]:''}); toast.success('Comment added!'); };
+  const handleCreatePost = async (e: React.FormEvent) => { e.preventDefault(); if (!content.trim()||isPosting) return; setIsPosting(true); const tags = content.match(/#(\w+)/g)?.map(t=>t.slice(1))||[]; await createPost({ variables:{ input:{ content, hashtags:tags, mediaUrls } } }); };
+  const handleLike = async (id:string, liked:boolean) => { liked ? await unlikePost({variables:{postId:id}}) : await likePost({variables:{postId:id}}); };
+  const handleComment = async (id:string) => { const c=commentInputs[id]; if(!c?.trim()) return; await createComment({variables:{input:{postId:id, content:c}}}); setCommentInputs({...commentInputs,[id]:''}); toast.success('Comment added!'); };
 
   const posts = allPosts;
-  const hasMore = data?.feed?.pageInfo?.hasNextPage;
   const isPostLiked = (post:any) => post.isLiked || likedPosts.has(post.id);
 
   return (
@@ -190,21 +150,16 @@ export default function HomePage() {
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">Home</h1>
         </motion.div>
-        {/* Create post form */}
+
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5">
           <form onSubmit={handleCreatePost}>
             <div className="flex space-x-3">
               <Link href={`/profile/${user?.username}`}>
-                {user?.avatarUrl ? <img src={user.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" /> :
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">{user?.displayName?.charAt(0)?.toUpperCase()||'U'}</div>}
+                {user?.avatarUrl ? <img src={user.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" /> : <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">{user?.displayName?.charAt(0)?.toUpperCase()||'U'}</div>}
               </Link>
               <div className="flex-1">
                 <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="What's on your mind?" rows={2} className="w-full resize-none bg-transparent text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none min-h-[60px] text-sm" />
-                {suggestions.length>0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5"><span className="text-[10px] text-slate-400">AI:</span>
-                    {suggestions.map(tag=>(<button key={tag} type="button" onClick={()=>addHashtag(tag)} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-50 text-brand-600 border border-brand-200 hover:bg-brand-100 transition-colors"><Icons.Hash className="w-3 h-3 mr-0.5"/>{tag}<span className="ml-1 text-brand-400">+</span></button>))}
-                  </div>
-                )}
+                {suggestions.length>0 && (<div className="mt-2 flex flex-wrap gap-1.5"><span className="text-[10px] text-slate-400">AI:</span>{suggestions.map(tag=>(<button key={tag} type="button" onClick={()=>addHashtag(tag)} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-50 text-brand-600 border border-brand-200 hover:bg-brand-100 transition-colors"><Icons.Hash className="w-3 h-3 mr-0.5"/>{tag}<span className="ml-1 text-brand-400">+</span></button>))}</div>)}
                 {mediaUrls.length>0 && (<div className="flex flex-wrap gap-2 mt-2">{mediaUrls.map((url,i)=>(<div key={i} className="relative"><img src={url} className="w-20 h-20 object-cover rounded-xl" alt="" /><button type="button" onClick={()=>setMediaUrls(mediaUrls.filter((_,idx)=>idx!==i))} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">×</button></div>))}</div>)}
                 <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-dark-100">
                   <label className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-dark-50 text-slate-400 hover:text-brand-600 transition-colors cursor-pointer"><Icons.CreatePost className="w-4 h-4"/><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isUploading}/></label>
@@ -215,7 +170,6 @@ export default function HomePage() {
           </form>
         </motion.div>
 
-        {/* Posts */}
         {loading && posts.length===0 && <div className="space-y-4">{[...Array(3)].map((_,i)=>(<div key={i} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5 animate-pulse"><div className="flex items-center space-x-3 mb-3"><div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"/><div className="space-y-2 flex-1"><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24"/><div className="h-2 bg-slate-200 dark:bg-dark-100 rounded-full w-16"/></div></div><div className="space-y-2"><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-3/4"/><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-1/2"/></div></div>))}</div>}
 
         <AnimatePresence>
@@ -223,8 +177,7 @@ export default function HomePage() {
             <motion.div key={post.id} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft hover:shadow-lg transition-all duration-300 p-5">
               <div className="flex items-start justify-between mb-3">
                 <Link href={`/profile/${post.author.username}`} className="flex items-center space-x-3 group">
-                  {post.author.avatarUrl ? <img src={post.author.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" /> :
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">{post.author.displayName.charAt(0).toUpperCase()}</div>}
+                  {post.author.avatarUrl ? <img src={post.author.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" /> : <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">{post.author.displayName.charAt(0).toUpperCase()}</div>}
                   <div><h3 className="font-semibold text-sm text-slate-900 dark:text-white group-hover:underline">{post.author.displayName}</h3><p className="text-xs text-slate-500 dark:text-slate-400">@{post.author.username} · {formatDistanceToNow(new Date(post.createdAt),{addSuffix:true})}</p></div>
                 </Link>
                 <button onClick={()=>router.push(`/post/${post.id}`)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-dark-50 text-slate-400 hover:text-slate-600 transition-colors"><Icons.More className="w-4 h-4"/></button>
@@ -260,17 +213,9 @@ export default function HomePage() {
           ))}
         </AnimatePresence>
 
-        {/* Loader sentinel */}
         <div ref={loaderRef} className="py-8 flex flex-col items-center">
           {isLoadingMore && <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mb-2"/>}
-          {hasMore && !isLoadingMore && (
-            <button onClick={loadMore} className="text-sm text-brand-600 hover:text-brand-700 font-medium">
-              Load more posts
-            </button>
-          )}
-          {!hasMore && posts.length > 0 && (
-            <p className="text-xs text-slate-400 dark:text-slate-500">You've reached the end 🎉</p>
-          )}
+          {!hasMore && posts.length > 0 && <p className="text-xs text-slate-400 dark:text-slate-500">You've reached the end</p>}
         </div>
       </div>
       <div className="hidden lg:block w-80 flex-shrink-0"><div className="sticky top-4 space-y-4"><TrendingSidebar/></div></div>
