@@ -100,13 +100,8 @@ export default function MessagesPage() {
   const messages = messagesData?.messages?.edges?.map((e: any) => e.node) || [];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-bold text-slate-900 dark:text-white font-display">Messages</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Chat with people you follow</p>
-      </motion.div>
-
-      <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft flex h-[650px] overflow-hidden">
+    <div className="">
+      <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft flex h-[644px] overflow-hidden">
         {/* Following List */}
         <div className="w-80 border-r border-slate-200 dark:border-dark-100 flex flex-col flex-shrink-0">
           <div className="p-4 border-b border-slate-200 dark:border-dark-100">

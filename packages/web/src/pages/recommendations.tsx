@@ -42,18 +42,10 @@ export default function RecommendationsPage() {
   const users = data?.suggestedUsers || [];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center space-x-3">
-          <Icons.ForYou className="w-8 h-8 text-brand-600 dark:text-brand-400" />
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white font-display">For You</h1>
-        </div>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Personalized recommendations just for you</p>
-      </motion.div>
-
+    <div className="max-w-5xl mx-auto space-y-8 mt-3">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recommended Posts */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-3">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
             <Icons.Trending className="w-5 h-5 text-brand-600 dark:text-brand-400" />
             <span>Recommended Posts</span>
@@ -62,7 +54,7 @@ export default function RecommendationsPage() {
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-6 animate-pulse">
+                <div key={i} className="bg-white dark:bg-dark-0 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-6 animate-pulse">
                   <div className="flex items-center space-x-3 mb-4">
                     <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"></div>
                     <div className="space-y-2 flex-1">
@@ -78,13 +70,13 @@ export default function RecommendationsPage() {
               ))}
             </div>
           ) : posts.length === 0 ? (
-            <div className="bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-12 text-center">
+            <div className="bg-white dark:bg-dark-0 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-12 text-center">
               <Icons.ForYou className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No recommendations yet</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm">Interact with more posts to get recommendations</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {posts.map((post: any) => (
                 <motion.div
                   key={post.id}
@@ -128,7 +120,7 @@ export default function RecommendationsPage() {
         </div>
 
         {/* Suggested Users */}
-        <div className="space-y-6">
+        <div className="space-y-3">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center space-x-2">
             <Icons.Profile className="w-5 h-5 text-brand-600 dark:text-brand-400" />
             <span>Suggested Users</span>
@@ -137,7 +129,7 @@ export default function RecommendationsPage() {
           {loading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-4 animate-pulse">
+                <div key={i} className="bg-white dark:bg-dark-0 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-4 animate-pulse">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"></div>
                     <div className="flex-1 space-y-2">
@@ -149,7 +141,7 @@ export default function RecommendationsPage() {
               ))}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {users.map((user: any) => (
                 <div
                   key={user.id}

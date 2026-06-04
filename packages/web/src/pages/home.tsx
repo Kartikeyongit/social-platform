@@ -146,11 +146,7 @@ export default function HomePage() {
 
   return (
     <div className="flex gap-6">
-      <div className="flex-1 max-w-2xl space-y-6">
-        <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">Home</h1>
-        </motion.div>
-
+      <div className="flex-1 max-w-2xl space-y-2">
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5">
           <form onSubmit={handleCreatePost}>
             <div className="flex space-x-3">
@@ -170,7 +166,7 @@ export default function HomePage() {
           </form>
         </motion.div>
 
-        {loading && posts.length===0 && <div className="space-y-4">{[...Array(3)].map((_,i)=>(<div key={i} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5 animate-pulse"><div className="flex items-center space-x-3 mb-3"><div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"/><div className="space-y-2 flex-1"><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24"/><div className="h-2 bg-slate-200 dark:bg-dark-100 rounded-full w-16"/></div></div><div className="space-y-2"><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-3/4"/><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-1/2"/></div></div>))}</div>}
+        {loading && posts.length===0 && <div className="space-y-4">{[...Array(3)].map((_,i)=>(<div key={i} className="bg-white dark:bg-dark-0 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5 animate-pulse"><div className="flex items-center space-x-3 mb-3"><div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"/><div className="space-y-2 flex-1"><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24"/><div className="h-2 bg-slate-200 dark:bg-dark-100 rounded-full w-16"/></div></div><div className="space-y-2"><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-3/4"/><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-1/2"/></div></div>))}</div>}
 
         <AnimatePresence>
           {posts.map((post:any)=>(
@@ -218,7 +214,7 @@ export default function HomePage() {
           {!hasMore && posts.length > 0 && <p className="text-xs text-slate-400 dark:text-slate-500">You've reached the end</p>}
         </div>
       </div>
-      <div className="hidden lg:block w-80 flex-shrink-0"><div className="sticky top-4 space-y-4"><TrendingSidebar/></div></div>
+      <div className="hidden lg:block w-80 flex-shrink-0"><div className="sticky top-0 space-y-4"><TrendingSidebar/></div></div>
     </div>
   );
 }

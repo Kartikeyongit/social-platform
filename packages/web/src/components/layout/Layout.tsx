@@ -65,7 +65,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 dark:bg-dark-0">
-      <div className="hidden lg:block fixed left-0 top-0 h-full z-30">
+      <div className="hidden lg:block fixed left-0 top-0 h-full z-30 w-72">
         <Sidebar />
       </div>
 
@@ -73,8 +73,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <MobileNav />
       </div>
 
-      <main className="flex-1 lg:ml-72 overflow-y-auto scrollbar-hide pt-16 lg:pt-0 pb-20 lg:pb-0">
-        <div className="p-4 lg:p-6">
+      <main className="flex-1 lg:ml-72 overflow-y-auto scrollbar-hide pt-16 lg:pt-3 pb-20 lg:pb-3">
+        <div className="p-4 lg:pr-6 lg:pl-2 lg:py-0 lg:pt-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={router.pathname}
@@ -103,4 +103,4 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       />
     </div>
   );
-};
+}
