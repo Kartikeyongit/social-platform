@@ -33,7 +33,7 @@ export const MobileNav: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   
   const { data } = useQuery(GET_UNREAD_COUNT, { pollInterval: 10000 });
   const unreadCount = data?.unreadNotificationCount || 0;
@@ -130,10 +130,6 @@ export const MobileNav: React.FC = () => {
                 </nav>
 
                 <div className="mt-6 pt-6 border-t border-slate-200/60 dark:border-dark-100 space-y-2">
-                  <button onClick={toggleTheme} className="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors">
-                    {theme === 'dark' ? <Icons.LightMode className="w-5 h-5" /> : <Icons.DarkMode className="w-5 h-5" />}
-                    <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-                  </button>
                   <button
                     onClick={() => { logout(); setIsOpen(false); }}
                     className="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
