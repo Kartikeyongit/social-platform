@@ -66,8 +66,14 @@ export default function LoginPage() {
           </div>
           <div className="mt-6 p-4 bg-brand-50 dark:bg-brand-900/20 rounded-2xl border border-brand-200/50 dark:border-brand-800/50">
             <p className="text-xs font-semibold text-brand-700 dark:text-brand-400 mb-2">Demo Credentials</p>
-            <p className="text-xs text-slate-600 dark:text-slate-400">Email: john@example.com</p>
-            <p className="text-xs text-slate-600 dark:text-slate-400">Password: password123</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">Email: john@example.com / Password: password123</p>
+            <button
+              type="button"
+              onClick={() => { setEmail('john@example.com'); setPassword('password123'); }}
+              className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+            >
+              Fill credentials
+            </button>
           </div>
         </motion.div>
       </div>

@@ -170,28 +170,31 @@ export default function HomePage() {
 
         <AnimatePresence>
           {posts.map((post:any)=>(
-            <motion.div key={post.id} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft hover:shadow-lg transition-all duration-300 p-5">
+            <motion.div
+              key={post.id} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
+              onClick={()=>router.push(`/post/${post.id}`)}
+              className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft hover:shadow-lg transition-all duration-300 p-5 cursor-pointer"
+            >
               <div className="flex items-start justify-between mb-3">
-                <Link href={`/profile/${post.author.username}`} className="flex items-center space-x-3 group">
+                <Link href={`/profile/${post.author.username}`} onClick={e=>e.stopPropagation()} className="flex items-center space-x-3 group">
                   {post.author.avatarUrl ? <img src={post.author.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" /> : <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">{post.author.displayName.charAt(0).toUpperCase()}</div>}
                   <div><h3 className="font-semibold text-sm text-slate-900 dark:text-white group-hover:underline">{post.author.displayName}</h3><p className="text-xs text-slate-500 dark:text-slate-400">@{post.author.username} · {formatDistanceToNow(new Date(post.createdAt),{addSuffix:true})}</p></div>
                 </Link>
-                <button onClick={()=>router.push(`/post/${post.id}`)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-dark-50 text-slate-400 hover:text-slate-600 transition-colors"><Icons.More className="w-4 h-4"/></button>
               </div>
               <p className="text-slate-800 dark:text-slate-200 mb-3 text-sm leading-relaxed">{post.content}</p>
               {post.mediaUrls?.length>0 && <div className="mb-3 rounded-2xl overflow-hidden"><img src={post.mediaUrls[0]} className="w-full h-48 object-cover" alt=""/></div>}
-              {post.hashtags?.length>0 && <div className="flex flex-wrap gap-1.5 mb-3">{post.hashtags.map((tag:string)=><span key={tag} className="tag-premium text-xs px-2 py-0.5"><Icons.Hash className="w-3 h-3 mr-0.5"/>{tag}</span>)}</div>}
+              {post.hashtags?.length>0 && <div className="flex flex-wrap gap-1.5 mb-3">{post.hashtags.map((tag:string)=><span key={tag} onClick={e=>e.stopPropagation()} className="tag-premium text-xs px-2 py-0.5"><Icons.Hash className="w-3 h-3 mr-0.5"/>{tag}</span>)}</div>}
               <div className="flex items-center pt-3 border-t border-slate-100 dark:border-dark-100">
-                <motion.button whileTap={{scale:0.85}} onClick={()=>handleLike(post.id,isPostLiked(post))} className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${isPostLiked(post)?'text-red-500':'text-slate-400 hover:text-red-400'}`}>
+                <motion.button whileTap={{scale:0.85}} onClick={e=>{e.stopPropagation();handleLike(post.id,isPostLiked(post))}} className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${isPostLiked(post)?'text-red-500':'text-slate-400 hover:text-red-400'}`}>
                   {burstingPosts.has(post.id) && <HeartBurst/>}
                   <Icons.Like className={`w-4 h-4 transition-all group-hover:scale-110 relative z-10 ${isPostLiked(post)?'fill-red-500':''}`}/>
                   <span className="text-xs font-medium relative z-10">{post.likeCount}</span>
                 </motion.button>
-                <motion.button whileTap={{scale:0.95}} onClick={()=>setShowComments({...showComments,[post.id]:!showComments[post.id]})} className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${showComments[post.id]?'text-brand-500':'text-slate-400 hover:text-brand-500'}`}>
+                <motion.button whileTap={{scale:0.95}} onClick={e=>{e.stopPropagation();setShowComments({...showComments,[post.id]:!showComments[post.id]})}} className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${showComments[post.id]?'text-brand-500':'text-slate-400 hover:text-brand-500'}`}>
                   <Icons.Comment className="w-4 h-4 transition-all group-hover:scale-110"/>
                   <span className="text-xs font-medium">{post.commentCount}</span>
                 </motion.button>
-                <motion.button whileTap={{scale:0.95}} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ml-auto text-slate-400 hover:text-green-500"><Icons.Share className="w-4 h-4 transition-all group-hover:scale-110"/></motion.button>
+                <motion.button whileTap={{scale:0.95}} onClick={e=>e.stopPropagation()} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ml-auto text-slate-400 hover:text-green-500"><Icons.Share className="w-4 h-4 transition-all group-hover:scale-110"/></motion.button>
               </div>
               <AnimatePresence>
                 {showComments[post.id] && (
@@ -199,7 +202,7 @@ export default function HomePage() {
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-dark-100">
                       <div className="flex space-x-2">
                         <input type="text" value={commentInputs[post.id]||''} onChange={e=>setCommentInputs({...commentInputs,[post.id]:e.target.value})} onKeyPress={e=>e.key==='Enter'&&handleComment(post.id)} placeholder="Write a comment..." className="input-premium flex-1 text-xs py-2"/>
-                        <button onClick={()=>handleComment(post.id)} className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded-xl text-xs font-medium"><Icons.Send className="w-3 h-3"/></button>
+                        <button onClick={e=>{e.stopPropagation();handleComment(post.id)}} className="bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded-xl text-xs font-medium"><Icons.Send className="w-3 h-3"/></button>
                       </div>
                     </div>
                   </motion.div>
