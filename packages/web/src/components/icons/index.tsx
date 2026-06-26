@@ -18,6 +18,7 @@ import {
   Hash,
   MoreHorizontal,
   Settings,
+  ArrowLeft,
 } from 'lucide-react';
 
 export const Icons = {
@@ -40,4 +41,5 @@ export const Icons = {
   Hash: (props: any) => <Hash {...props} />,
   More: (props: any) => <MoreHorizontal {...props} />,
   Settings: (props: any) => <Settings {...props} />,
+  Back: (props: any) => <ArrowLeft {...props} />,
 };

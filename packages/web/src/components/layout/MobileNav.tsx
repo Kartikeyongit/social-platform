@@ -103,7 +103,7 @@ export const MobileNav: React.FC = () => {
                     className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors"
                     aria-label="Close menu"
                   >
-                    <span className="text-xl text-slate-500 dark:text-slate-400">✕</span>
+                    <Icons.Back className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                   </button>
                 </div>
 

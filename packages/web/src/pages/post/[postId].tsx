@@ -130,7 +130,7 @@ export default function PostDetailPage() {
     <div className="max-w-xl mx-auto space-y-4">
       {/* Back button */}
       <button onClick={() => router.back()} className="flex items-center space-x-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
-        <Icons.Explore className="w-4 h-4 rotate-180" />
+        <Icons.Back className="w-4 h-4" />
         <span className="text-sm">Back</span>
       </button>
 

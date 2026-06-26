@@ -4,7 +4,7 @@ import { useQuery, useMutation, gql } from '@apollo/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
 import { UserX, Settings } from 'lucide-react';
@@ -70,26 +70,27 @@ export default function ProfilePage() {
     fetchPolicy: 'network-only',
   });
 
-  const [followUser] = useMutation(FOLLOW_USER);
-  const [unfollowUser] = useMutation(UNFOLLOW_USER);
+  const [followUser, { loading: followMutLoading }] = useMutation(FOLLOW_USER, {
+    onCompleted: () => { toast.success('Following!'); refetch(); },
+    onError: (err) => toast.error(err.message),
+  });
+  const [unfollowUser, { loading: unfollowMutLoading }] = useMutation(UNFOLLOW_USER, {
+    onCompleted: () => { toast.success('Unfollowed'); refetch(); },
+    onError: (err) => toast.error(err.message),
+  });
 
-  const handleFollow = async () => {
+  const followLoading = followMutLoading || unfollowMutLoading;
+
+  const handleFollow = () => {
     if (!data?.user) return;
-    try {
-      if (data.user.isFollowing) {
-        await unfollowUser({ variables: { userId: data.user.id } });
-        toast.success('Unfollowed');
-      } else {
-        await followUser({ variables: { userId: data.user.id } });
-        toast.success('Following!');
-      }
-      refetch();
-    } catch (error) {
-      toast.error('Failed to update follow');
+    if (data.user.isFollowing) {
+      unfollowUser({ variables: { userId: data.user.id } });
+    } else {
+      followUser({ variables: { userId: data.user.id } });
     }
   };
 
-  if (loading) {
+  if (!username || loading || !data) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-8 animate-pulse">
@@ -198,12 +199,27 @@ export default function ProfilePage() {
               </Link>
             ) : (
               <motion.button
+                layout
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleFollow}
+                disabled={followLoading}
                 className={profileUser.isFollowing ? 'btn-secondary-premium' : 'btn-primary-premium'}
               >
-                {profileUser.isFollowing ? 'Unfollow' : 'Follow'}
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={followLoading ? 'loading' : (profileUser.isFollowing ? 'unfollow' : 'follow')}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex items-center space-x-2"
+                  >
+                    {followLoading ? (
+                      <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /><span>Processing</span></>
+                    ) : profileUser.isFollowing ? 'Unfollow' : 'Follow'}
+                  </motion.span>
+                </AnimatePresence>
               </motion.button>
             )}
           </div>

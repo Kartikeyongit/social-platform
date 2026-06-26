@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
+import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 import { Toaster } from 'react-hot-toast';
@@ -16,6 +17,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
   const isAuthPage = ['/login', '/register'].includes(router.pathname);
   const { theme } = useTheme();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   if (loading) {
     return (
@@ -47,18 +49,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {children}
           </motion.div>
         </AnimatePresence>
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            style: {
-              borderRadius: '12px',
-              padding: '10px 14px',
-              fontSize: '13px',
-              background: theme === 'dark' ? '#1e293b' : '#fff',
-              color: theme === 'dark' ? '#f1f5f9' : '#0f172a',
-            },
-          }}
-        />
       </>
     );
   }
@@ -66,7 +56,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="h-screen flex flex-col bg-slate-50 dark:bg-dark-0">
       <div className="hidden lg:block fixed left-0 top-0 h-full z-30 w-72">
-        <Sidebar />
+        <Sidebar onOpenNotifications={() => setNotificationsOpen(true)} />
       </div>
 
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30">
@@ -89,15 +79,32 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </main>
 
+      <NotificationsPanel
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
+
       <Toaster
-        position="top-center"
+        position="top-right"
+        gutter={8}
         toastOptions={{
+          duration: 3000,
           style: {
-            borderRadius: '12px',
-            padding: '10px 14px',
+            borderRadius: '16px',
+            padding: '12px 16px',
             fontSize: '13px',
+            fontWeight: 500,
             background: theme === 'dark' ? '#1e293b' : '#fff',
             color: theme === 'dark' ? '#f1f5f9' : '#0f172a',
+            border: '1px solid',
+            borderColor: theme === 'dark' ? 'rgba(51,65,85,0.6)' : 'rgba(226,232,240,0.6)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
+          },
+          success: {
+            iconTheme: { primary: '#059669', secondary: '#fff' },
+          },
+          error: {
+            iconTheme: { primary: '#dc2626', secondary: '#fff' },
           },
         }}
       />

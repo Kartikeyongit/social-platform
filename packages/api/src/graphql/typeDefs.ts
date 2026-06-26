@@ -176,6 +176,7 @@ export const typeDefs = `#graphql
     # Social
     followUser(userId: ID!): User!
     unfollowUser(userId: ID!): User!
+    removeFollower(followerId: ID!): User!
     
     # Messages
     sendMessage(input: SendMessageInput!): Message!

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { useQuery, gql } from '@apollo/client';
-import { motion } from 'framer-motion';
+import { useQuery, useMutation, gql } from '@apollo/client';
+import { toast } from 'react-hot-toast';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
 
@@ -24,14 +24,36 @@ const GET_FOLLOW_DATA = gql`
   }
 `;
 
+const UNFOLLOW_USER = gql`
+  mutation UnfollowUser($userId: ID!) {
+    unfollowUser(userId: $userId) { id }
+  }
+`;
+
+const REMOVE_FOLLOWER = gql`
+  mutation RemoveFollower($followerId: ID!) {
+    removeFollower(followerId: $followerId) { id }
+  }
+`;
+
 export default function FollowersPage() {
   const router = useRouter();
   const { username } = router.query;
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
 
-  const { data, loading } = useQuery(GET_FOLLOW_DATA, {
+  const { data, loading, refetch } = useQuery(GET_FOLLOW_DATA, {
     variables: { username },
     skip: !username,
+  });
+
+  const [unfollowUser] = useMutation(UNFOLLOW_USER, {
+    onCompleted: () => { toast.success('Unfollowed'); refetch(); },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const [removeFollower] = useMutation(REMOVE_FOLLOWER, {
+    onCompleted: () => { toast.success('Follower removed'); refetch(); },
+    onError: (err) => toast.error(err.message),
   });
 
   const followers = data?.followers || [];
@@ -42,7 +64,7 @@ export default function FollowersPage() {
     <div className="max-w-xl mx-auto space-y-6">
       <div className="flex items-center space-x-4">
         <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-dark-50">
-          <Icons.Explore className="w-5 h-5 rotate-180 text-slate-600 dark:text-slate-400" />
+          <Icons.Back className="w-5 h-5 text-slate-600 dark:text-slate-400" />
         </button>
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">@{username}</h1>
@@ -111,7 +133,20 @@ export default function FollowersPage() {
                   {person.bio && <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1">{person.bio}</p>}
                 </div>
               </div>
-              <button className="btn-secondary-premium text-xs">View</button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (activeTab === 'followers') {
+                    removeFollower({ variables: { followerId: person.id } });
+                  } else {
+                    unfollowUser({ variables: { userId: person.id } });
+                  }
+                }}
+                className="btn-secondary-premium text-xs"
+              >
+                {activeTab === 'followers' ? 'Remove' : 'Unfollow'}
+              </button>
             </Link>
           ))}
         </div>

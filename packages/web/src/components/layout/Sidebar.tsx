@@ -11,14 +11,18 @@ const GET_UNREAD_COUNT = gql`
   }
 `;
 
+interface SidebarProps {
+  onOpenNotifications?: () => void;
+}
+
 const menuItems = [
   { icon: Icons.Home, label: 'Home', href: '/home' },
-  { icon: Icons.Notifications, label: 'Notifications', href: '/notifications' },
+  { icon: Icons.Notifications, label: 'Notifications', href: '/notifications', isNotif: true },
   { icon: Icons.Messages, label: 'Messages', href: '/messages' },
   { icon: Icons.ForYou, label: 'For You', href: '/recommendations' },
 ];
 
-export const Sidebar: React.FC = () => {
+export const Sidebar: React.FC<SidebarProps> = ({ onOpenNotifications }) => {
   const router = useRouter();
   const { user, logout } = useAuth();
 
@@ -45,6 +49,43 @@ export const Sidebar: React.FC = () => {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = router.pathname === item.href;
+            const isNotifItem = item.isNotif && onOpenNotifications;
+
+            const content = (
+              <>
+                <Icon
+                  className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${
+                    isActive ? 'text-brand-600 dark:text-brand-400' : ''
+                  }`}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                <span className={`font-medium ${isActive ? 'font-semibold' : ''}`}>
+                  {item.label}
+                </span>
+
+                {item.isNotif && unreadCount > 0 && (
+                  <span className="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1.5">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </>
+            );
+
+            if (isNotifItem) {
+              return (
+                <button
+                  key={item.href}
+                  onClick={onOpenNotifications}
+                  className={`group w-full flex items-center space-x-3 px-4 py-3 rounded-2xl transition-all duration-200 ${
+                    isActive
+                      ? 'text-brand-700 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-dark-50 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {content}
+                </button>
+              );
+            }
 
             return (
               <Link
@@ -56,21 +97,7 @@ export const Sidebar: React.FC = () => {
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-dark-50 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                <Icon
-                  className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${
-                    isActive ? 'text-brand-600 dark:text-brand-400' : ''
-                  }`}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                <span className={`font-medium ${isActive ? 'font-semibold' : ''}`}>
-                  {item.label}
-                </span>
-
-                {item.label === 'Notifications' && unreadCount > 0 && (
-                  <span className="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1.5">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
+                {content}
               </Link>
             );
           })}

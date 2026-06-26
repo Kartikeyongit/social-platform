@@ -343,6 +343,12 @@ export const resolvers = {
       await prisma.follow.deleteMany({ where: { followerId: userId, followingId: targetUserId } });
       return prisma.user.findUnique({ where: { id: targetUserId } });
     },
+
+    removeFollower: async (_: any, { followerId }: any, { userId }: Context) => {
+      if (!userId) throw new GraphQLError('Not authenticated');
+      await prisma.follow.deleteMany({ where: { followerId, followingId: userId } });
+      return prisma.user.findUnique({ where: { id: followerId } });
+    },
     
     sendMessage: async (_: any, { input }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');

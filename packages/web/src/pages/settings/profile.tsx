@@ -25,7 +25,7 @@ export default function EditProfilePage() {
 
   const [updateProfile, { loading }] = useMutation(UPDATE_PROFILE, {
     onCompleted: async () => {
-      await refreshUser(); // Refresh the user data in context
+      await refreshUser();
       toast.success('Profile updated!');
       router.back();
     },
@@ -52,7 +52,7 @@ export default function EditProfilePage() {
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <button onClick={() => router.back()} className="flex items-center space-x-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
-        <Icons.Explore className="w-5 h-5 rotate-180" /><span className="text-sm font-medium">Back</span>
+        <Icons.Back className="w-5 h-5" /><span className="text-sm font-medium">Back</span>
       </button>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">Edit Profile</h1>
