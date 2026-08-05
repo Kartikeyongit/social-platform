@@ -24,6 +24,7 @@ const bottomMenuItems = [
 const sideMenuItems = [
   { icon: Icons.Home, label: 'Home', href: '/home' },
   { icon: Icons.Explore, label: 'Explore', href: '/explore' },
+  { icon: Icons.Trending, label: 'Trending', href: '/trending' },
   { icon: Icons.Notifications, label: 'Notifications', href: '/notifications' },
   { icon: Icons.Messages, label: 'Messages', href: '/messages' },
   { icon: Icons.ForYou, label: 'For You', href: '/recommendations' },

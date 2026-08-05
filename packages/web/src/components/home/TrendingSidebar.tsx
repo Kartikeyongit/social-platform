@@ -1,5 +1,5 @@
-import React from 'react';
-import { useQuery, gql } from '@apollo/client';
+import React, { useState } from 'react';
+import { useQuery, useMutation, gql } from '@apollo/client';
 import { useRouter } from 'next/router';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
@@ -16,29 +16,65 @@ const HOME_TRENDING = gql`
       displayName
       bio
       avatarUrl
+      isFollowing
     }
   }
 `;
 
+const FOLLOW_USER = gql`
+  mutation FollowUser($userId: ID!) { followUser(userId: $userId) { id isFollowing } }
+`;
+
+const UNFOLLOW_USER = gql`
+  mutation UnfollowUser($userId: ID!) { unfollowUser(userId: $userId) { id isFollowing } }
+`;
+
+const USER_FOLLOW_FRAGMENT = gql`
+  fragment UserFollow on User { id isFollowing }
+`;
+
 export const TrendingSidebar: React.FC = () => {
   const router = useRouter();
-  const { data } = useQuery(HOME_TRENDING);
+  const [q, setQ] = useState('');
+  const { data } = useQuery(HOME_TRENDING, { fetchPolicy: 'network-only' });
+
+  const applyFollow = (cache: any, { data: d }: any) => {
+    const u = d?.followUser || d?.unfollowUser;
+    if (!u) return;
+    cache.writeFragment({
+      id: `User:${u.id}`,
+      fragment: USER_FOLLOW_FRAGMENT,
+      data: { id: u.id, isFollowing: u.isFollowing },
+    });
+  };
+
+  const [followUser] = useMutation(FOLLOW_USER, { update: applyFollow });
+  const [unfollowUser] = useMutation(UNFOLLOW_USER, { update: applyFollow });
 
   const hashtags = data?.homeHashtags || [];
   const users = data?.suggestedUsers || [];
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = q.trim();
+    if (!v) return;
+    router.push(`/explore?q=${encodeURIComponent(v)}`);
+  };
 
   return (
     <div className="h-full">
       <div className="h-full bg-white dark:bg-dark-0 border border-slate-200/60 dark:border-dark-100 rounded-3xl flex flex-col overflow-hidden shadow-soft p-4 space-y-4">
         {/* Search */}
-        <div className="relative flex-shrink-0">
+        <form onSubmit={submitSearch} className="relative flex-shrink-0">
           <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
+            value={q}
+            onChange={e => setQ(e.target.value)}
             placeholder="Search"
             className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-dark-50 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white placeholder:text-slate-400"
           />
-        </div>
+        </form>
 
         {/* Trending Hashtags */}
         <div className="flex-shrink-0">
@@ -48,7 +84,7 @@ export const TrendingSidebar: React.FC = () => {
               <p className="text-xs text-slate-400 dark:text-slate-500">No trending topics</p>
             )}
             {hashtags.map((tag: any, index: number) => (
-              <div key={tag.name} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-50 rounded-lg p-2 -mx-1 transition-colors">
+              <div key={tag.name} onClick={() => router.push(`/explore?q=#${tag.name}`)} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-50 rounded-lg p-2 -mx-1 transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-slate-400">{index + 1} · Trending</p>
@@ -85,8 +121,17 @@ export const TrendingSidebar: React.FC = () => {
                       <p className="text-[10px] text-slate-400 truncate">@{user.username}</p>
                     </div>
                   </Link>
-                  <button className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full px-3 py-1 text-xs font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors flex-shrink-0 ml-2">
-                    Follow
+                  <button
+                    onClick={() => user.isFollowing
+                      ? unfollowUser({ variables: { userId: user.id } })
+                      : followUser({ variables: { userId: user.id } })}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors flex-shrink-0 ml-2 ${
+                      user.isFollowing
+                        ? 'bg-slate-100 dark:bg-dark-100 text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500'
+                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
+                    }`}
+                  >
+                    {user.isFollowing ? 'Following' : 'Follow'}
                   </button>
                 </div>
               ))}

@@ -17,6 +17,8 @@ interface SidebarProps {
 
 const menuItems = [
   { icon: Icons.Home, label: 'Home', href: '/home' },
+  { icon: Icons.Explore, label: 'Explore', href: '/explore' },
+  { icon: Icons.Trending, label: 'Trending', href: '/trending' },
   { icon: Icons.Notifications, label: 'Notifications', href: '/notifications', isNotif: true },
   { icon: Icons.Messages, label: 'Messages', href: '/messages' },
   { icon: Icons.ForYou, label: 'For You', href: '/recommendations' },

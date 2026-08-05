@@ -1,26 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { useMutation, gql } from '@apollo/client';
-import { Heart, MessageCircle, Share2, Bookmark } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { Icons } from '@/components/icons';
 
 const LIKE_POST = gql`
   mutation LikePost($postId: ID!) {
-    likePost(postId: $postId) {
-      id
-      likeCount
-      isLiked
-    }
+    likePost(postId: $postId) { id likeCount isLiked }
   }
 `;
 
 const UNLIKE_POST = gql`
   mutation UnlikePost($postId: ID!) {
-    unlikePost(postId: $postId) {
-      id
-      likeCount
-      isLiked
-    }
+    unlikePost(postId: $postId) { id likeCount isLiked }
   }
 `;
 
@@ -44,81 +39,76 @@ interface PostCardProps {
 }
 
 export const PostCard: React.FC<PostCardProps> = ({ post }) => {
+  const router = useRouter();
+  const [liked, setLiked] = useState(post.isLiked);
+  const [likeCount, setLikeCount] = useState(post.likeCount);
   const [likePost] = useMutation(LIKE_POST);
   const [unlikePost] = useMutation(UNLIKE_POST);
 
-  const handleLike = async () => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
-      if (post.isLiked) {
-        await unlikePost({ variables: { postId: post.id } });
+      if (liked) {
+        const { data } = await unlikePost({ variables: { postId: post.id } });
+        if (data?.unlikePost) { setLiked(data.unlikePost.isLiked); setLikeCount(data.unlikePost.likeCount); }
       } else {
-        await likePost({ variables: { postId: post.id } });
-        toast.success('Post liked!');
+        const { data } = await likePost({ variables: { postId: post.id } });
+        if (data?.likePost) { setLiked(data.likePost.isLiked); setLikeCount(data.likePost.likeCount); }
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to update like');
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
-      {/* Author Info */}
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-          <span className="text-primary-600 font-medium">
-            {post.author.displayName.charAt(0)}
-          </span>
-        </div>
-        <div>
-          <p className="font-medium text-gray-900">{post.author.displayName}</p>
-          <p className="text-sm text-gray-500">
-            @{post.author.username} · {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-          </p>
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      onClick={() => router.push(`/post/${post.id}`)}
+      className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft hover:shadow-lg transition-all duration-300 p-5 cursor-pointer"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <Link href={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="flex items-center space-x-3 group">
+          {post.author.avatarUrl ? (
+            <img src={post.author.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">
+              {post.author.displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div>
+            <h3 className="font-semibold text-sm text-slate-900 dark:text-white group-hover:underline">{post.author.displayName}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">@{post.author.username} · {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</p>
+          </div>
+        </Link>
       </div>
-
-      {/* Content */}
-      <p className="text-gray-800 mb-4 whitespace-pre-wrap">{post.content}</p>
-
-      {/* Hashtags */}
-      {post.hashtags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {post.hashtags.map((tag) => (
-            <span
-              key={tag}
-              className="px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-sm hover:bg-primary-100 cursor-pointer transition-colors"
-            >
-              #{tag}
+      <p className="text-slate-800 dark:text-slate-200 mb-3 text-sm leading-relaxed">{post.content}</p>
+      {post.mediaUrls?.length > 0 && (
+        <div className="mb-3 rounded-2xl overflow-hidden">
+          <img src={post.mediaUrls[0]} className="w-full h-48 object-cover" alt="" />
+        </div>
+      )}
+      {post.hashtags?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {post.hashtags.map(tag => (
+            <span key={tag} onClick={e => e.stopPropagation()} className="tag-premium text-xs px-2 py-0.5">
+              <Icons.Hash className="w-3 h-3 mr-0.5" />{tag}
             </span>
           ))}
         </div>
       )}
-
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t">
-        <button
-          onClick={handleLike}
-          className={`flex items-center space-x-2 transition-colors ${
-            post.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
-          }`}
-        >
-          <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
-          <span className="text-sm">{post.likeCount}</span>
-        </button>
-
-        <button className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 transition-colors">
-          <MessageCircle className="w-5 h-5" />
-          <span className="text-sm">{post.commentCount}</span>
-        </button>
-
-        <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600 transition-colors">
-          <Share2 className="w-5 h-5" />
-        </button>
-
-        <button className="flex items-center space-x-2 text-gray-500 hover:text-yellow-600 transition-colors">
-          <Bookmark className="w-5 h-5" />
-        </button>
+      <div className="flex items-center pt-3 border-t border-slate-100 dark:border-dark-100">
+        <motion.button whileTap={{ scale: 0.85 }} onClick={handleLike}
+          className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${liked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}>
+          <Icons.Like className={`w-4 h-4 transition-all group-hover:scale-110 ${liked ? 'fill-red-500' : ''}`} />
+          <span className="text-xs font-medium">{likeCount}</span>
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.95 }} onClick={e => { e.stopPropagation(); router.push(`/post/${post.id}`); }}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group text-slate-400 hover:text-brand-500">
+          <Icons.Comment className="w-4 h-4 transition-all group-hover:scale-110" />
+          <span className="text-xs font-medium">{post.commentCount}</span>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };
