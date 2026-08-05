@@ -10,6 +10,8 @@ import Link from 'next/link';
 import { UserX, Settings } from 'lucide-react';
 import { Hashtag } from '@/components/ui/Hashtag';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ProfileSkeleton } from '@/components/ui/Skeleton';
 
 const GET_USER = gql`
   query GetUser($username: String!) {
@@ -107,16 +109,7 @@ export default function ProfilePage() {
   if (!username || loading || !data) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-8 animate-pulse">
-          <div className="flex items-center space-x-4">
-            <div className="w-24 h-24 rounded-full bg-slate-200 dark:bg-dark-100"></div>
-            <div className="space-y-3 flex-1">
-              <div className="h-6 bg-slate-200 dark:bg-dark-100 rounded-full w-48"></div>
-              <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-32"></div>
-              <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-64"></div>
-            </div>
-          </div>
-        </div>
+        <ProfileSkeleton />
       </div>
     );
   }
@@ -244,11 +237,11 @@ export default function ProfilePage() {
       <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">Posts</h2>
       
       {posts.length === 0 ? (
-        <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-12 text-center">
-          <Icons.CreatePost className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No posts yet</h3>
-          <p className="text-slate-500 dark:text-slate-400">When they post, it'll show up here</p>
-        </div>
+        <EmptyState
+          icon={<Icons.CreatePost className="w-8 h-8" />}
+          title="No posts yet"
+          description="When they post, it'll show up here"
+        />
       ) : (
         <div className="space-y-4">
           {posts.map((post: any, index: number) => (

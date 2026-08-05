@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import { PostCard } from '@/components/post/PostCard';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { PostSkeleton } from '@/components/ui/Skeleton';
 import Link from 'next/link';
 
 const EXPLORE_FEED = gql`
@@ -180,11 +182,11 @@ export default function ExplorePage() {
           )}
 
           {!searchLoading && results !== null && users.length === 0 && hashtags.length === 0 && (
-            <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-12 text-center">
-              <Icons.Search className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No results</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Nothing found for "@{debounced}"</p>
-            </div>
+            <EmptyState
+              icon={<Icons.Search className="w-8 h-8" />}
+              title="No results"
+              description={`Nothing found for "@${debounced}"`}
+            />
           )}
 
           {users.length > 0 && (
@@ -264,32 +266,18 @@ export default function ExplorePage() {
 
           {loading && posts.length === 0 && (
             <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-dark-0 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5 animate-pulse">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100" />
-                    <div className="space-y-2 flex-1">
-                      <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24" />
-                      <div className="h-2 bg-slate-200 dark:bg-dark-100 rounded-full w-16" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-3/4" />
-                    <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-1/2" />
-                  </div>
-                </div>
-              ))}
+              {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
             </div>
           )}
 
           {posts.map((post: any) => <PostCard key={post.id} post={post} />)}
 
-          {!loading && posts.length === 0 && (
-            <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-12 text-center">
-              <Icons.Trending className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No popular posts yet</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Be the first to create something great</p>
-            </div>
+          {!loading && !error && posts.length === 0 && (
+            <EmptyState
+              icon={<Icons.Trending className="w-8 h-8" />}
+              title="No popular posts yet"
+              description="Be the first to create something great"
+            />
           )}
 
           <div ref={loaderRef} className="py-8 flex flex-col items-center">

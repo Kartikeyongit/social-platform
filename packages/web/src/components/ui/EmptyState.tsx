@@ -1,35 +1,31 @@
 import React from 'react';
+import Link from 'next/link';
+import { Icons } from '@/components/icons';
 
 interface EmptyStateProps {
-  icon?: string;
+  icon: React.ReactNode;
   title: string;
   description?: string;
   action?: {
     label: string;
-    onClick: () => void;
+    href: string;
   };
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ 
-  icon = '📭', 
-  title, 
-  description, 
-  action 
-}) => {
+export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action }) => {
   return (
-    <div className="text-center py-12 px-4">
-      <div className="text-6xl mb-4">{icon}</div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+    <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-12 text-center">
+      <div className="w-16 h-16 bg-brand-50 dark:bg-brand-900/20 rounded-3xl flex items-center justify-center mx-auto mb-4">
+        <span className="text-slate-300 dark:text-slate-600">{icon}</span>
+      </div>
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">{title}</h3>
       {description && (
-        <p className="text-sm text-gray-500 mb-4 max-w-sm mx-auto">{description}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{description}</p>
       )}
       {action && (
-        <button
-          onClick={action.onClick}
-          className="btn-primary"
-        >
+        <Link href={action.href} className="btn-primary-premium inline-block text-sm">
           {action.label}
-        </button>
+        </Link>
       )}
     </div>
   );

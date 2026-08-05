@@ -7,6 +7,8 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Hashtag } from '@/components/ui/Hashtag';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { PostSkeleton } from '@/components/ui/Skeleton';
 
 const GET_RECOMMENDATIONS = gql`
   query GetRecommendations($limit: Int) {
@@ -63,28 +65,14 @@ export default function RecommendationsPage() {
 
           {loading ? (
             <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-dark-0 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-6 animate-pulse">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"></div>
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-24"></div>
-                      <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-16"></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-3/4"></div>
-                    <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-1/2"></div>
-                  </div>
-                </div>
-              ))}
+              {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
             </div>
           ) : posts.length === 0 ? (
-            <div className="bg-white dark:bg-dark-0 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-12 text-center">
-              <Icons.ForYou className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No recommendations yet</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Interact with more posts to get recommendations</p>
-            </div>
+            <EmptyState
+              icon={<Icons.ForYou className="w-8 h-8" />}
+              title="No recommendations yet"
+              description="Interact with more posts to get recommendations"
+            />
           ) : (
             <div className="space-y-2">
               {posts.map((post: any) => (

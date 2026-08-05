@@ -4,6 +4,7 @@ import { useQuery, useMutation, gql } from '@apollo/client';
 import { toast } from 'react-hot-toast';
 import { Icons } from '@/components/icons';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import Link from 'next/link';
 
 const GET_FOLLOW_DATA = gql`
@@ -125,12 +126,11 @@ export default function FollowersPage() {
           ))}
         </div>
       ) : currentList.length === 0 ? (
-        <div className="bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-12 text-center">
-          <Icons.Profile className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {activeTab === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
-          </p>
-        </div>
+        <EmptyState
+          icon={<Icons.Profile className="w-8 h-8" />}
+          title={activeTab === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
+          description={activeTab === 'followers' ? 'People who follow you will show up here' : 'People you follow will show up here'}
+        />
       ) : (
         <div className="space-y-2">
           {currentList.map((person: any) => (

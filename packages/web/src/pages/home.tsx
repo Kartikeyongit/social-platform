@@ -5,7 +5,9 @@ import { CreatePost } from '@/components/post/CreatePost';
 import { PostCard } from '@/components/post/PostCard';
 import { CommentSection } from '@/components/post/CommentSection';
 import { ErrorState } from '@/components/ui/ErrorState';
-import Link from 'next/link';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { PostSkeleton } from '@/components/ui/Skeleton';
+import { Icons } from '@/components/icons';
 
 const GET_FEED = gql`
   query GetFeed($limit: Int, $cursor: String) {
@@ -114,21 +116,7 @@ export default function HomePage() {
 
         {loading && allPosts.length === 0 && (
           <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5 animate-pulse">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24" />
-                    <div className="h-2 bg-slate-200 dark:bg-dark-100 rounded-full w-16" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-3/4" />
-                  <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-1/2" />
-                </div>
-              </div>
-            ))}
+            {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
           </div>
         )}
 
@@ -141,14 +129,12 @@ export default function HomePage() {
         )}
 
         {!loading && !error && allPosts.length === 0 && (
-          <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-10 text-center">
-            <p className="text-slate-500 dark:text-slate-400 text-sm">
-              Your feed is quiet. Follow more people or post something to get started.
-            </p>
-            <Link href="/explore" className="btn-primary-premium inline-block mt-4 text-sm">
-              Explore
-            </Link>
-          </div>
+          <EmptyState
+            icon={<Icons.Home className="w-8 h-8" />}
+            title="Your feed is quiet"
+            description="Follow more people or post something to get started."
+            action={{ label: 'Explore', href: '/explore' }}
+          />
         )}
 
         {allPosts.map((post: any) => (

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import { getNotificationHref, getNotificationIcon } from '@/utils/notifications';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import Link from 'next/link';
 
 const GET_NOTIFICATIONS = gql`
@@ -123,11 +124,11 @@ export default function NotificationsPage() {
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-12 text-center">
-          <Icons.Notifications className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No notifications yet</h3>
-          <p className="text-slate-500 dark:text-slate-400">You're all caught up!</p>
-        </div>
+        <EmptyState
+          icon={<Icons.Notifications className="w-8 h-8" />}
+          title="No notifications yet"
+          description="You're all caught up!"
+        />
       ) : (
         <div className="space-y-2">
           {notifications.map((notification: any) => {

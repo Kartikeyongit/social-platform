@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -156,10 +157,13 @@ export default function MessagesPage() {
                 />
               </div>
             ) : following.length === 0 ? (
-              <div className="p-6 text-center">
-                <Icons.Profile className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3"/>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Not following anyone yet</p>
-                <Link href="/explore" className="text-sm text-brand-600 hover:text-brand-700 mt-1 inline-block">Discover people</Link>
+              <div className="p-4">
+                <EmptyState
+                  icon={<Icons.Profile className="w-8 h-8" />}
+                  title="Not following anyone yet"
+                  description="Follow people to start messaging them."
+                  action={{ label: 'Discover people', href: '/explore' }}
+                />
               </div>
             ) : (
               <div className="space-y-0.5 p-2">
@@ -201,7 +205,11 @@ export default function MessagesPage() {
                     />
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full"><div className="text-center"><Icons.Messages className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3"/><p className="text-slate-500 dark:text-slate-400 text-sm">No messages yet</p><p className="text-xs text-slate-400 mt-1">Say hello!</p></div></div>
+                  <EmptyState
+                    icon={<Icons.Messages className="w-8 h-8" />}
+                    title="No messages yet"
+                    description="Say hello!"
+                  />
                 ) : (
                   messages.map((msg: any) => {
                     const isMine = msg.sender.id === user?.id;
@@ -227,7 +235,13 @@ export default function MessagesPage() {
               </form>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center"><div className="text-center"><Icons.Messages className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4"/><p className="text-slate-500 dark:text-slate-400 text-lg">Select a conversation</p><p className="text-sm text-slate-400 mt-1">Choose someone you follow to start chatting</p></div></div>
+            <div className="flex-1 flex items-center justify-center p-6">
+              <EmptyState
+                icon={<Icons.Messages className="w-8 h-8" />}
+                title="Select a conversation"
+                description="Choose someone you follow to start chatting"
+              />
+            </div>
           )}
         </div>
       </div>

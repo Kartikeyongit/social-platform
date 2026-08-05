@@ -3,6 +3,7 @@ import { useQuery, useMutation, gql } from '@apollo/client';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import Link from 'next/link';
 
 const TRENDING = gql`
@@ -86,12 +87,12 @@ export default function TrendingPage() {
         </div>
       )}
 
-      {!loading && hashtags.length === 0 && (
-        <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-12 text-center">
-          <Icons.Trending className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">No trending topics</h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Hashtags will appear here as posts are created</p>
-        </div>
+      {!loading && !error && hashtags.length === 0 && (
+        <EmptyState
+          icon={<Icons.Trending className="w-8 h-8" />}
+          title="No trending topics"
+          description="Hashtags will appear here as posts are created"
+        />
       )}
 
       {hashtags.length > 0 && (
