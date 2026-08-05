@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, gql } from '@apollo/client';
+import { useQuery, useMutation, useSubscription, gql } from '@apollo/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -46,6 +46,19 @@ const SEND_MESSAGE = gql`
   }
 `;
 
+const NEW_MESSAGE_SUB = gql`
+  subscription NewMessage {
+    newMessage {
+      id
+      content
+      read
+      createdAt
+      sender { id username displayName avatarUrl }
+      receiver { id username displayName avatarUrl }
+    }
+  }
+`;
+
 export default function MessagesPage() {
   const { user } = useAuth();
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -62,7 +75,29 @@ export default function MessagesPage() {
     variables: { receiverId: selectedUser?.id, limit: 100 },
     skip: !selectedUser,
     fetchPolicy: 'network-only',
-    pollInterval: 2000, // Poll every 2 seconds
+  });
+
+  useSubscription(NEW_MESSAGE_SUB, {
+    onData: ({ client, data }) => {
+      const msg = data.data?.newMessage;
+      if (!msg || !selectedUser) return;
+      if (msg.sender.id !== selectedUser.id && msg.receiver.id !== selectedUser.id) return;
+      client.cache.updateQuery({
+        query: GET_MESSAGES,
+        variables: { receiverId: selectedUser.id, limit: 100 },
+      }, (existing: any) => {
+        if (!existing?.messages?.edges?.some((e: any) => e.node.id === msg.id)) {
+          return {
+            ...existing,
+            messages: {
+              ...existing.messages,
+              edges: [...existing.messages.edges, { __typename: 'MessageEdge', cursor: msg.id, node: msg }],
+            },
+          };
+        }
+        return existing;
+      });
+    },
   });
 
   const [sendMessage, { loading: sendingMessage }] = useMutation(SEND_MESSAGE);

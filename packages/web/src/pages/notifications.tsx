@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery, useMutation, gql } from '@apollo/client';
+import { useQuery, useMutation, useSubscription, gql } from '@apollo/client';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
@@ -28,6 +28,23 @@ const MARK_ALL_READ = gql`
   }
 `;
 
+const NEW_NOTIFICATION_SUB = gql`
+  subscription NewNotification {
+    newNotification {
+      id
+      type
+      entityId
+      read
+      createdAt
+      actor {
+        id
+        username
+        displayName
+      }
+    }
+  }
+`;
+
 const getNotificationIcon = (type: string) => {
   switch (type) {
     case 'LIKE': return <Icons.Like className="w-5 h-5 text-red-500" />;
@@ -46,6 +63,22 @@ export default function NotificationsPage() {
 
   const [markAllRead] = useMutation(MARK_ALL_READ, {
     onCompleted: () => refetch(),
+  });
+
+  useSubscription(NEW_NOTIFICATION_SUB, {
+    onData: ({ client, data }) => {
+      const n = data.data?.newNotification;
+      if (!n) return;
+      client.cache.updateQuery({ query: GET_NOTIFICATIONS, variables: { limit: 50 } }, (prev: any) => {
+        if (!prev?.notifications) return prev;
+        if (prev.notifications.some((x: any) => x.id === n.id)) return prev;
+        return {
+          ...prev,
+          notifications: [n, ...prev.notifications].slice(0, 50),
+          unreadNotificationCount: (prev.unreadNotificationCount || 0) + 1,
+        };
+      });
+    },
   });
 
   const notifications = data?.notifications || [];

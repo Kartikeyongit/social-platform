@@ -41,7 +41,7 @@
 - 🔍 **Explore Page** - trending hashtags, popular posts, user search
 
 ### Real-Time Features
-- 💌 **Direct Messaging** between users with 2-second polling
+- 💌 **Direct Messaging** between users with real-time WebSocket delivery
 - 🔔 **Notification System** - likes, comments, follows
 - 📱 **Responsive Design** - mobile bottom nav, slide menu, desktop sidebar
 

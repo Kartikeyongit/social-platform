@@ -15,6 +15,7 @@ import { signToken } from '../../utils/auth';
 import { prisma } from '../../utils/db';
 import { safeRedis } from '../../utils/redis';
 import { createLoaders, Loaders } from '../../utils/loaders';
+import { pubsub, notificationTopic, messageTopic } from '../../utils/pubsub';
 
 interface Context {
   prisma: PrismaClient;
@@ -408,20 +409,25 @@ export const resolvers = {
         return prisma.post.findUnique({ where: { id: postId }, include: { author: true } });
       }
       try {
-        return await prisma.$transaction(async (tx) => {
-          const like = await tx.like.create({ data: { postId, userId } });
+        const result = await prisma.$transaction(async (tx) => {
+          await tx.like.create({ data: { postId, userId } });
           const post = await tx.post.update({
             where: { id: postId },
             data: { likeCount: { increment: 1 } },
             include: { author: true },
           });
+          let notification = null;
           if (post.authorId !== userId) {
-            await tx.notification.create({
+            notification = await tx.notification.create({
               data: { userId: post.authorId, type: 'LIKE', actorId: userId, entityId: postId },
             });
           }
-          return post;
+          return { post, notification };
         });
+        if (result.notification) {
+          await pubsub.publish(notificationTopic(result.notification.userId), { newNotification: result.notification });
+        }
+        return result.post;
       } catch (error: any) {
         // Race: another request created the like first - treat as idempotent
         if (error?.code === 'P2002') {
@@ -459,10 +465,16 @@ export const resolvers = {
           include: { author: true },
         });
         await tx.post.update({ where: { id: data.postId }, data: { commentCount: { increment: 1 } } });
+        let notification = null;
         if (post.authorId !== userId) {
-          await tx.notification.create({
+          notification = await tx.notification.create({
             data: { userId: post.authorId, type: 'COMMENT', actorId: userId, entityId: data.postId },
           });
+        }
+        return { comment, notification };
+      }).then(async ({ comment, notification }) => {
+        if (notification) {
+          await pubsub.publish(notificationTopic(notification.userId), { newNotification: notification });
         }
         return comment;
       });
@@ -478,15 +490,16 @@ export const resolvers = {
       });
       if (!existing) {
         try {
-          await prisma.$transaction(async (tx) => {
+          const notification = await prisma.$transaction(async (tx) => {
             await tx.follow.create({ data: { followerId: userId, followingId: targetUserId } });
             await tx.notification.deleteMany({
               where: { userId: targetUserId, type: 'FOLLOW', actorId: userId },
             });
-            await tx.notification.create({
+            return tx.notification.create({
               data: { userId: targetUserId, type: 'FOLLOW', actorId: userId, entityId: userId },
             });
           });
+          await pubsub.publish(notificationTopic(targetUserId), { newNotification: notification });
         } catch (error: any) {
           // Race: follow already created by another request - idempotent
           if (error?.code !== 'P2002') throw error;
@@ -513,10 +526,13 @@ export const resolvers = {
       if (data.receiverId === userId) throw new GraphQLError('Cannot message yourself');
       const receiver = await prisma.user.findUnique({ where: { id: data.receiverId } });
       if (!receiver) throw new GraphQLError('Receiver not found');
-      return prisma.message.create({
+      const message = await prisma.message.create({
         data: { content: data.content, senderId: userId, receiverId: data.receiverId },
         include: { sender: true, receiver: true },
       });
+      await pubsub.publish(messageTopic(data.receiverId), { newMessage: message });
+      await pubsub.publish(messageTopic(userId), { newMessage: message });
+      return message;
     },
     
     markNotificationRead: async (_: any, { notificationId }: any, { userId }: Context) => {
@@ -600,5 +616,20 @@ export const resolvers = {
   
   Notification: {
     actor: (parent: any, _: any, { loaders }: Context) => loaders.userByIdLoader.load(parent.actorId),
+  },
+  
+  Subscription: {
+    newNotification: {
+      subscribe: (_: any, __: any, { userId }: Context) => {
+        if (!userId) throw new GraphQLError('Not authenticated');
+        return pubsub.asyncIterator(notificationTopic(userId));
+      },
+    },
+    newMessage: {
+      subscribe: (_: any, __: any, { userId }: Context) => {
+        if (!userId) throw new GraphQLError('Not authenticated');
+        return pubsub.asyncIterator(messageTopic(userId));
+      },
+    },
   },
 };
