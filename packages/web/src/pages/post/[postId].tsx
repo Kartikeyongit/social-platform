@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { Hashtag } from '@/components/ui/Hashtag';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const GET_POST = gql`
   query GetPost($postId: ID!) {
@@ -73,7 +75,7 @@ export default function PostDetailPage() {
   const { user } = useAuth();
   const [commentInput, setCommentInput] = useState('');
 
-  const { data, loading, refetch } = useQuery(GET_POST, {
+  const { data, loading, error, refetch } = useQuery(GET_POST, {
     variables: { postId },
     skip: !postId,
     fetchPolicy: 'network-only',
@@ -95,6 +97,18 @@ export default function PostDetailPage() {
     if (!commentInput.trim() || !post) return;
     await createComment({ variables: { input: { postId: post.id, content: commentInput } } });
   };
+
+  if (error && !loading) {
+    return (
+      <div className="max-w-xl mx-auto">
+        <ErrorState
+          title="Couldn't load this post"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -172,9 +186,7 @@ export default function PostDetailPage() {
         {post.hashtags?.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {post.hashtags.map((tag: string) => (
-              <span key={tag} className="tag-premium">
-                <Icons.Hash className="w-3 h-3 mr-1" />{tag}
-              </span>
+              <Hashtag key={tag} name={tag} />
             ))}
           </div>
         )}

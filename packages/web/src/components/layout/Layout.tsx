@@ -4,9 +4,7 @@ import { MobileNav } from './MobileNav';
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
-import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,7 +14,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const isAuthPage = ['/login', '/register'].includes(router.pathname);
-  const { theme } = useTheme();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   if (loading) {
@@ -55,6 +52,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 dark:bg-dark-0">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-white dark:focus:bg-dark-50 focus:px-4 focus:py-2 focus:rounded-xl focus:text-sm focus:font-medium focus:text-slate-900 dark:focus:text-white focus:shadow-soft"
+      >
+        Skip to main content
+      </a>
+
       <div className="hidden lg:block fixed left-0 top-0 h-full z-30 w-72">
         <Sidebar onOpenNotifications={() => setNotificationsOpen(true)} />
       </div>
@@ -63,7 +67,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <MobileNav />
       </div>
 
-      <main className="flex-1 lg:ml-72 overflow-y-auto scrollbar-hide pt-16 lg:pt-3 pb-20 lg:pb-3">
+      <main id="main-content" className="flex-1 lg:ml-72 overflow-y-auto scrollbar-hide pt-16 lg:pt-3 pb-20 lg:pb-3">
         <div className="p-4 lg:pr-6 lg:pl-2 lg:py-0 lg:pt-0">
           <AnimatePresence mode="wait">
             <motion.div
@@ -82,31 +86,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <NotificationsPanel
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
-      />
-
-      <Toaster
-        position="top-right"
-        gutter={8}
-        toastOptions={{
-          duration: 3000,
-          style: {
-            borderRadius: '16px',
-            padding: '12px 16px',
-            fontSize: '13px',
-            fontWeight: 500,
-            background: theme === 'dark' ? '#1e293b' : '#fff',
-            color: theme === 'dark' ? '#f1f5f9' : '#0f172a',
-            border: '1px solid',
-            borderColor: theme === 'dark' ? 'rgba(51,65,85,0.6)' : 'rgba(226,232,240,0.6)',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
-          },
-          success: {
-            iconTheme: { primary: '#059669', secondary: '#fff' },
-          },
-          error: {
-            iconTheme: { primary: '#dc2626', secondary: '#fff' },
-          },
-        }}
       />
     </div>
   );

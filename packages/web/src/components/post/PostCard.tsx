@@ -1,23 +1,35 @@
 import React, { useState } from 'react';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useMutation, gql } from '@apollo/client';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
+import { Hashtag } from '@/components/ui/Hashtag';
 
 const LIKE_POST = gql`
-  mutation LikePost($postId: ID!) {
-    likePost(postId: $postId) { id likeCount isLiked }
-  }
+  mutation LikePost($postId: ID!) { likePost(postId: $postId) { id likeCount isLiked } }
 `;
 
 const UNLIKE_POST = gql`
-  mutation UnlikePost($postId: ID!) {
-    unlikePost(postId: $postId) { id likeCount isLiked }
-  }
+  mutation UnlikePost($postId: ID!) { unlikePost(postId: $postId) { id likeCount isLiked } }
 `;
+
+const HeartBurst = () => (
+  <div className="absolute inset-0 pointer-events-none">
+    {[...Array(6)].map((_, i) => (
+      <motion.div
+        key={i}
+        initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
+        animate={{ x: Math.cos(i * 60 * Math.PI / 180) * 18, y: Math.sin(i * 60 * Math.PI / 180) * 18, opacity: 0, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="absolute top-1/2 left-1/2 w-1.5 h-1.5 rounded-full"
+        style={{ background: ['#ef4444', '#f97316', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'][i] }}
+      />
+    ))}
+  </div>
+);
 
 interface PostCardProps {
   post: {
@@ -36,41 +48,76 @@ interface PostCardProps {
       avatarUrl?: string;
     };
   };
+  onCommentClick?: () => void;
+  children?: React.ReactNode;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, onCommentClick, children }) => {
   const router = useRouter();
   const [liked, setLiked] = useState(post.isLiked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [burst, setBurst] = useState(false);
+  const [likePending, setLikePending] = useState(false);
   const [likePost] = useMutation(LIKE_POST);
   const [unlikePost] = useMutation(UNLIKE_POST);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      if (liked) {
-        const { data } = await unlikePost({ variables: { postId: post.id } });
-        if (data?.unlikePost) { setLiked(data.unlikePost.isLiked); setLikeCount(data.unlikePost.likeCount); }
-      } else {
-        const { data } = await likePost({ variables: { postId: post.id } });
-        if (data?.likePost) { setLiked(data.likePost.isLiked); setLikeCount(data.likePost.likeCount); }
-      }
-    } catch {
-      toast.error('Failed to update like');
+    if (likePending) return;
+    const next = !liked;
+    setLiked(next);
+    setLikeCount(c => (next ? c + 1 : Math.max(0, c - 1)));
+    if (next) {
+      setBurst(true);
+      setTimeout(() => setBurst(false), 650);
     }
+    setLikePending(true);
+    try {
+      const { data } = await (next ? likePost : unlikePost)({ variables: { postId: post.id } });
+      const res = data?.likePost || data?.unlikePost;
+      if (res) { setLiked(res.isLiked); setLikeCount(res.likeCount); }
+    } catch {
+      setLiked(!next);
+      setLikeCount(c => (next ? Math.max(0, c - 1) : c + 1));
+      toast.error('Failed to update like');
+    } finally {
+      setLikePending(false);
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/post/${post.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Could not copy link');
+    }
+  };
+
+  const handleComment = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onCommentClick) onCommentClick();
+    else router.push(`/post/${post.id}`);
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      onClick={() => router.push(`/post/${post.id}`)}
-      className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft hover:shadow-lg transition-all duration-300 p-5 cursor-pointer"
+      className="relative bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft hover:shadow-lg transition-all duration-300 p-5"
     >
-      <div className="flex items-start justify-between mb-3">
+      <Link
+        href={`/post/${post.id}`}
+        aria-label={`View post by ${post.author.displayName}`}
+        className="absolute inset-0 z-10 rounded-3xl focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none"
+      />
+
+      <div className="relative z-20 mb-3">
         <Link href={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="flex items-center space-x-3 group">
           {post.author.avatarUrl ? (
-            <img src={post.author.avatarUrl} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt="" />
+            <img src={post.author.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
           ) : (
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">
               {post.author.displayName.charAt(0).toUpperCase()}
@@ -82,33 +129,55 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
           </div>
         </Link>
       </div>
+
       <p className="text-slate-800 dark:text-slate-200 mb-3 text-sm leading-relaxed">{post.content}</p>
+
       {post.mediaUrls?.length > 0 && (
         <div className="mb-3 rounded-2xl overflow-hidden">
-          <img src={post.mediaUrls[0]} className="w-full h-48 object-cover" alt="" />
+          <img src={post.mediaUrls[0]} alt={`Image posted by ${post.author.displayName}`} className="w-full h-48 object-cover" />
         </div>
       )}
+
       {post.hashtags?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <div className="relative z-20 flex flex-wrap gap-1.5 mb-3">
           {post.hashtags.map(tag => (
-            <span key={tag} onClick={e => e.stopPropagation()} className="tag-premium text-xs px-2 py-0.5">
-              <Icons.Hash className="w-3 h-3 mr-0.5" />{tag}
-            </span>
+            <Hashtag key={tag} name={tag} />
           ))}
         </div>
       )}
-      <div className="flex items-center pt-3 border-t border-slate-100 dark:border-dark-100">
-        <motion.button whileTap={{ scale: 0.85 }} onClick={handleLike}
-          className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${liked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}>
-          <Icons.Like className={`w-4 h-4 transition-all group-hover:scale-110 ${liked ? 'fill-red-500' : ''}`} />
-          <span className="text-xs font-medium">{likeCount}</span>
+
+      <div className="relative z-20 flex items-center pt-3 border-t border-slate-100 dark:border-dark-100">
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          onClick={handleLike}
+          aria-pressed={liked}
+          aria-label={liked ? 'Unlike post' : 'Like post'}
+          className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${liked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}
+        >
+          {burst && <HeartBurst />}
+          <Icons.Like className={`w-4 h-4 transition-all group-hover:scale-110 relative z-10 ${liked ? 'fill-red-500' : ''}`} />
+          <span className="text-xs font-medium relative z-10">{likeCount}</span>
         </motion.button>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={e => { e.stopPropagation(); router.push(`/post/${post.id}`); }}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group text-slate-400 hover:text-brand-500">
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={handleComment}
+          aria-label={onCommentClick ? 'Toggle comments' : 'View comments'}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group text-slate-400 hover:text-brand-500"
+        >
           <Icons.Comment className="w-4 h-4 transition-all group-hover:scale-110" />
           <span className="text-xs font-medium">{post.commentCount}</span>
         </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={handleShare}
+          aria-label="Copy post link"
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ml-auto text-slate-400 hover:text-green-500"
+        >
+          <Icons.Share className="w-4 h-4 transition-all group-hover:scale-110" />
+        </motion.button>
       </div>
+
+      {children && <div className="relative z-20">{children}</div>}
     </motion.div>
   );
 };

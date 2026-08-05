@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
+import { ErrorState } from '@/components/ui/ErrorState';
 import Link from 'next/link';
 
 const TRENDING = gql`
@@ -34,7 +35,7 @@ const USER_FOLLOW_FRAGMENT = gql`
 `;
 
 export default function TrendingPage() {
-  const { data, loading } = useQuery(TRENDING, {
+  const { data, loading, error, refetch } = useQuery(TRENDING, {
     variables: { limit: 30 },
     fetchPolicy: 'network-only',
   });
@@ -65,6 +66,14 @@ export default function TrendingPage() {
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white font-display">Trending</h1>
         </div>
       </motion.div>
+
+      {error && !loading && (
+        <ErrorState
+          title="Couldn't load trending topics"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
+      )}
 
       {loading && (
         <div className="space-y-3">

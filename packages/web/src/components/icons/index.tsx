@@ -19,6 +19,7 @@ import {
   MoreHorizontal,
   Settings,
   ArrowLeft,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const Icons = {
@@ -42,4 +43,5 @@ export const Icons = {
   More: (props: any) => <MoreHorizontal {...props} />,
   Settings: (props: any) => <Settings {...props} />,
   Back: (props: any) => <ArrowLeft {...props} />,
+  Alert: (props: any) => <AlertTriangle {...props} />,
 };

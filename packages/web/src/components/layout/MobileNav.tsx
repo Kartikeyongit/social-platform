@@ -68,7 +68,7 @@ export const MobileNav: React.FC = () => {
           {theme === 'dark' ? <Icons.LightMode className="w-5 h-5 text-slate-700 dark:text-slate-300" /> : <Icons.DarkMode className="w-5 h-5 text-slate-700 dark:text-slate-300" />}
         </button>
 
-        <Link href={user ? `/profile/${user.username}` : '/profile'}>
+        <Link href={user ? `/profile/${user.username}` : '/profile'} aria-label={user ? `View ${user.username}'s profile` : 'Your profile'}>
           {user?.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
           ) : (
@@ -170,6 +170,7 @@ export const MobileNav: React.FC = () => {
                     if (textarea) textarea.focus();
                   }, 100);
                 }}
+                aria-label="Create post"
                 className="relative -mt-8"
               >
                 <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-blue-600 rounded-full flex items-center justify-center shadow-glow hover:shadow-xl transition-all active:scale-90">

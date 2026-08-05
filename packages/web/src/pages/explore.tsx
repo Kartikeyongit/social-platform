@@ -4,6 +4,7 @@ import { useQuery, useLazyQuery, useMutation, gql } from '@apollo/client';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import { PostCard } from '@/components/post/PostCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 import Link from 'next/link';
 
 const EXPLORE_FEED = gql`
@@ -95,7 +96,7 @@ export default function ExplorePage() {
     }
   }, [debounced]);
 
-  const { data, loading, fetchMore } = useQuery(EXPLORE_FEED, {
+  const { data, loading, error, fetchMore, refetch } = useQuery(EXPLORE_FEED, {
     variables: { limit: POSTS_PER_PAGE },
     fetchPolicy: 'network-only',
     onCompleted: (d) => {
@@ -235,7 +236,7 @@ export default function ExplorePage() {
               </h2>
               <div className="flex flex-wrap gap-2">
                 {hashtags.map((tag: any) => (
-                  <Link key={tag.name} href={`/explore?q=#${tag.name}`} className="group">
+                  <Link key={tag.name} href={`/explore?q=${encodeURIComponent(`#${tag.name}`)}`} className="group">
                     <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-brand-50 text-brand-600 border border-brand-200 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-800/50 transition-colors">
                       <Icons.Hash className="w-3 h-3 mr-0.5" />{tag.name}
                       <span className="ml-1.5 text-xs text-brand-400">{tag.postCount} posts</span>
@@ -252,6 +253,14 @@ export default function ExplorePage() {
             <Icons.Trending className="w-5 h-5 text-brand-600 dark:text-brand-400" />
             <span>Popular</span>
           </h2>
+
+          {error && !loading && (
+            <ErrorState
+              title="Couldn't load popular posts"
+              message={error.message}
+              onRetry={() => refetch()}
+            />
+          )}
 
           {loading && posts.length === 0 && (
             <div className="space-y-4">

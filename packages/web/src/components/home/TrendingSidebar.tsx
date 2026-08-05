@@ -84,7 +84,11 @@ export const TrendingSidebar: React.FC = () => {
               <p className="text-xs text-slate-400 dark:text-slate-500">No trending topics</p>
             )}
             {hashtags.map((tag: any, index: number) => (
-              <div key={tag.name} onClick={() => router.push(`/explore?q=#${tag.name}`)} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-50 rounded-lg p-2 -mx-1 transition-colors">
+              <Link
+                key={tag.name}
+                href={`/explore?q=${encodeURIComponent(`#${tag.name}`)}`}
+                className="block hover:bg-slate-50 dark:hover:bg-dark-50 rounded-lg p-2 -mx-1 transition-colors"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[10px] text-slate-400">{index + 1} · Trending</p>
@@ -93,7 +97,7 @@ export const TrendingSidebar: React.FC = () => {
                   </div>
                   <Icons.More className="w-4 h-4 text-slate-400" />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

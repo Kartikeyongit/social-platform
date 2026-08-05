@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
 import { UserX, Settings } from 'lucide-react';
+import { Hashtag } from '@/components/ui/Hashtag';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const GET_USER = gql`
   query GetUser($username: String!) {
@@ -64,7 +66,7 @@ export default function ProfilePage() {
   const { username } = router.query;
   const { user: currentUser } = useAuth();
 
-  const { data, loading, refetch } = useQuery(GET_USER, {
+  const { data, loading, error, refetch } = useQuery(GET_USER, {
     variables: { username },
     skip: !username,
     fetchPolicy: 'network-only',
@@ -89,6 +91,18 @@ export default function ProfilePage() {
       followUser({ variables: { userId: data.user.id } });
     }
   };
+
+  if (error && !loading) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <ErrorState
+          title="Couldn't load this profile"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   if (!username || loading || !data) {
     return (
@@ -169,7 +183,7 @@ export default function ProfilePage() {
                 </Link>
                 
                 <Link
-                  href={`/profile/${profileUser.username}/followers`}
+                  href={`/profile/${profileUser.username}/followers?tab=following`}
                   className="text-center hover:opacity-80 transition-opacity cursor-pointer no-underline"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -249,10 +263,7 @@ export default function ProfilePage() {
               {post.hashtags?.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {post.hashtags.map((tag: string) => (
-                    <span key={tag} className="tag-premium">
-                      <Icons.Hash className="w-3 h-3 mr-1" />
-                      {tag}
-                    </span>
+                    <Hashtag key={tag} name={tag} />
                   ))}
                 </div>
               )}

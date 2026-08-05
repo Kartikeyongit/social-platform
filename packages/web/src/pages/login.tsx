@@ -56,8 +56,8 @@ export default function LoginPage() {
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-display">Sign in</h2>
             <p className="text-slate-500 dark:text-slate-400 mb-8">Enter your credentials to continue</p>
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email</label><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input-premium" placeholder="john@example.com" /></div>
-              <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Password</label><input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="input-premium" placeholder="••••••••" /></div>
+              <div><label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email</label><input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input-premium" placeholder="john@example.com" /></div>
+              <div><label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Password</label><input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="input-premium" placeholder="••••••••" /></div>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={loading} className="btn-primary-premium w-full py-3 text-base">
                 {loading ? <span className="flex items-center space-x-2"><span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Signing in...</span></span> : 'Sign in'}
               </motion.button>

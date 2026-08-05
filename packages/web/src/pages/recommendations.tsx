@@ -5,6 +5,8 @@ import { Icons } from '@/components/icons';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { Hashtag } from '@/components/ui/Hashtag';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const GET_RECOMMENDATIONS = gql`
   query GetRecommendations($limit: Int) {
@@ -34,7 +36,7 @@ const GET_RECOMMENDATIONS = gql`
 
 export default function RecommendationsPage() {
   const router = useRouter();
-  const { data, loading } = useQuery(GET_RECOMMENDATIONS, {
+  const { data, loading, error, refetch } = useQuery(GET_RECOMMENDATIONS, {
     variables: { limit: 10 },
   });
 
@@ -50,6 +52,14 @@ export default function RecommendationsPage() {
             <Icons.Trending className="w-5 h-5 text-brand-600 dark:text-brand-400" />
             <span>Recommended Posts</span>
           </h2>
+
+          {error && !loading && (
+            <ErrorState
+              title="Couldn't load recommendations"
+              message={error.message}
+              onRetry={() => refetch()}
+            />
+          )}
 
           {loading ? (
             <div className="space-y-4">
@@ -107,9 +117,7 @@ export default function RecommendationsPage() {
                   {post.hashtags?.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {post.hashtags.map((tag: string) => (
-                        <span key={tag} className="tag-premium">
-                          <Icons.Hash className="w-3 h-3 mr-1" />{tag}
-                        </span>
+                        <Hashtag key={tag} name={tag} />
                       ))}
                     </div>
                   )}

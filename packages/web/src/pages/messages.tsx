@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
 const GET_FOLLOWING = gql`
@@ -66,12 +68,12 @@ export default function MessagesPage() {
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: followingData, loading: followingLoading } = useQuery(GET_FOLLOWING, {
+  const { data: followingData, loading: followingLoading, error: followingError, refetch: refetchFollowing } = useQuery(GET_FOLLOWING, {
     variables: { username: user?.username || '' },
     skip: !user?.username,
   });
 
-  const { data: messagesData, loading: messagesLoading, refetch } = useQuery(GET_MESSAGES, {
+  const { data: messagesData, loading: messagesLoading, error: messagesError, refetch } = useQuery(GET_MESSAGES, {
     variables: { receiverId: selectedUser?.id, limit: 100 },
     skip: !selectedUser,
     fetchPolicy: 'network-only',
@@ -120,7 +122,7 @@ export default function MessagesPage() {
       // Force immediate refetch
       setTimeout(() => refetch(), 300);
     } catch (error) {
-      console.error('Send failed:', error);
+      toast.error('Failed to send message');
     }
   }, [messageInput, selectedUser, sendingMessage, sendMessage, refetch]);
 
@@ -136,15 +138,23 @@ export default function MessagesPage() {
 
   return (
     <div className="">
-      <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft flex h-[644px] overflow-hidden">
+      <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft flex flex-col md:flex-row md:h-[644px] h-auto overflow-hidden">
         {/* Following List */}
-        <div className="w-80 border-r border-slate-200 dark:border-dark-100 flex flex-col flex-shrink-0">
+        <div className="w-full md:w-80 md:border-r border-b md:border-b-0 border-slate-200 dark:border-dark-100 flex flex-col flex-shrink-0">
           <div className="p-4 border-b border-slate-200 dark:border-dark-100">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">Following</p>
           </div>
-          <div className="overflow-y-auto flex-1 scrollbar-hide">
+          <div className="overflow-y-auto flex-1 scrollbar-hide max-h-64 md:max-h-none">
             {followingLoading ? (
               <div className="p-2 space-y-1">{[...Array(4)].map((_,i)=><div key={i} className="p-3 animate-pulse"><div className="flex items-center space-x-3"><div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"/><div className="space-y-2 flex-1"><div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-24"/><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-16"/></div></div></div>)}</div>
+            ) : followingError ? (
+              <div className="p-4">
+                <ErrorState
+                  title="Couldn't load people"
+                  message={followingError.message}
+                  onRetry={() => refetchFollowing()}
+                />
+              </div>
             ) : following.length === 0 ? (
               <div className="p-6 text-center">
                 <Icons.Profile className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3"/>
@@ -169,7 +179,7 @@ export default function MessagesPage() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-[400px] md:min-h-0">
           {selectedUser ? (
             <>
               <div className="p-4 border-b border-slate-200 dark:border-dark-100 flex-shrink-0">
@@ -182,6 +192,14 @@ export default function MessagesPage() {
               <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
                 {messagesLoading ? (
                   <div className="flex items-center justify-center h-full"><div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin"/></div>
+                ) : messagesError ? (
+                  <div className="flex items-center justify-center h-full">
+                    <ErrorState
+                      title="Couldn't load messages"
+                      message={messagesError.message}
+                      onRetry={() => refetch()}
+                    />
+                  </div>
                 ) : messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full"><div className="text-center"><Icons.Messages className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3"/><p className="text-slate-500 dark:text-slate-400 text-sm">No messages yet</p><p className="text-xs text-slate-400 mt-1">Say hello!</p></div></div>
                 ) : (
@@ -202,7 +220,7 @@ export default function MessagesPage() {
               <form onSubmit={handleSend} className="p-4 border-t border-slate-200 dark:border-dark-100 flex-shrink-0">
                 <div className="flex space-x-2">
                   <input type="text" value={messageInput} onChange={e=>setMessageInput(e.target.value)} placeholder="Type a message..." className="input-premium flex-1"/>
-                  <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} type="submit" disabled={!messageInput.trim()||sendingMessage} className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-2xl font-medium transition-all disabled:opacity-50">
+                  <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} type="submit" disabled={!messageInput.trim()||sendingMessage} aria-label="Send message" className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-2xl font-medium transition-all disabled:opacity-50">
                     {sendingMessage ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"/> : <Icons.Send className="w-5 h-5"/>}
                   </motion.button>
                 </div>

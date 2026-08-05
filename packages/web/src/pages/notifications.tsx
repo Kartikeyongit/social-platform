@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery, useMutation, useSubscription, gql } from '@apollo/client';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
+import { getNotificationHref, getNotificationIcon } from '@/utils/notifications';
+import { ErrorState } from '@/components/ui/ErrorState';
+import Link from 'next/link';
 
 const GET_NOTIFICATIONS = gql`
   query GetNotifications($limit: Int) {
@@ -45,23 +48,13 @@ const NEW_NOTIFICATION_SUB = gql`
   }
 `;
 
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case 'LIKE': return <Icons.Like className="w-5 h-5 text-red-500" />;
-    case 'COMMENT': return <Icons.Comment className="w-5 h-5 text-blue-500" />;
-    case 'FOLLOW': return <Icons.Profile className="w-5 h-5 text-green-500" />;
-    case 'MESSAGE': return <Icons.Messages className="w-5 h-5 text-purple-500" />;
-    default: return <Icons.Notifications className="w-5 h-5 text-slate-500" />;
-  }
-};
-
 export default function NotificationsPage() {
-  const { data, loading, refetch } = useQuery(GET_NOTIFICATIONS, {
+  const { data, loading, error, refetch } = useQuery(GET_NOTIFICATIONS, {
     variables: { limit: 50 },
     fetchPolicy: 'network-only',
   });
 
-  const [markAllRead] = useMutation(MARK_ALL_READ, {
+  const [markAllRead, { loading: markingRead }] = useMutation(MARK_ALL_READ, {
     onCompleted: () => refetch(),
   });
 
@@ -81,6 +74,11 @@ export default function NotificationsPage() {
     },
   });
 
+  // Visiting the page marks everything read
+  useEffect(() => {
+    if (unreadCount > 0 && !markingRead) markAllRead();
+  }, [data?.unreadNotificationCount]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const notifications = data?.notifications || [];
   const unreadCount = data?.unreadNotificationCount || 0;
 
@@ -95,12 +93,20 @@ export default function NotificationsPage() {
             )}
           </div>
           {unreadCount > 0 && (
-            <button onClick={() => markAllRead()} className="btn-secondary-premium text-sm">
-              Mark all read
+            <button onClick={() => markAllRead()} disabled={markingRead} className="btn-secondary-premium text-sm disabled:opacity-50">
+              {markingRead ? 'Marking...' : 'Mark all read'}
             </button>
           )}
         </div>
       </motion.div>
+
+      {error && !loading && (
+        <ErrorState
+          title="Couldn't load notifications"
+          message={error.message}
+          onRetry={() => refetch()}
+        />
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -124,15 +130,12 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {notifications.map((notification: any) => (
-            <div
-              key={notification.id}
-              className={`bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-4 cursor-pointer hover:shadow-md transition-all ${
-                !notification.read ? 'border-l-4 border-brand-500 bg-brand-50/30 dark:bg-brand-900/10' : ''
-              }`}
-            >
+          {notifications.map((notification: any) => {
+            const href = getNotificationHref(notification);
+            const icon = getNotificationIcon(notification.type);
+            const inner = (
               <div className="flex items-center space-x-3">
-                {getNotificationIcon(notification.type)}
+                {icon}
                 <div className="flex-1">
                   <p className={`text-sm ${!notification.read ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
                     <span className="font-medium">{notification.actor.displayName}</span>
@@ -150,8 +153,20 @@ export default function NotificationsPage() {
                   <div className="w-2.5 h-2.5 bg-brand-500 rounded-full"></div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+            const base = `block bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-4 hover:shadow-md transition-all ${
+              !notification.read ? 'border-l-4 border-brand-500 bg-brand-50/30 dark:bg-brand-900/10' : ''
+            }`;
+            return href ? (
+              <Link key={notification.id} href={href} className={base}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={notification.id} className={base}>
+                {inner}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

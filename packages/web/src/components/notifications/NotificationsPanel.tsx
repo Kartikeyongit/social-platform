@@ -3,6 +3,8 @@ import { useQuery, useMutation, gql } from '@apollo/client';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '@/components/icons';
+import { getNotificationHref, getNotificationIcon } from '@/utils/notifications';
+import Link from 'next/link';
 
 const GET_NOTIFICATIONS = gql`
   query GetNotifications($limit: Int) {
@@ -28,16 +30,6 @@ const MARK_ALL_READ = gql`
   }
 `;
 
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case 'LIKE': return <Icons.Like className="w-5 h-5 text-red-500" />;
-    case 'COMMENT': return <Icons.Comment className="w-5 h-5 text-blue-500" />;
-    case 'FOLLOW': return <Icons.Profile className="w-5 h-5 text-green-500" />;
-    case 'MESSAGE': return <Icons.Messages className="w-5 h-5 text-purple-500" />;
-    default: return <Icons.Notifications className="w-5 h-5 text-slate-500" />;
-  }
-};
-
 interface NotificationsPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,7 +42,7 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
     skip: !isOpen,
   });
 
-  const [markAllRead] = useMutation(MARK_ALL_READ, {
+  const [markAllRead, { loading: markingRead }] = useMutation(MARK_ALL_READ, {
     onCompleted: () => refetch(),
   });
 
@@ -70,6 +62,9 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
             onClick={onClose}
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Notifications"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -87,9 +82,10 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
                 {unreadCount > 0 && (
                   <button
                     onClick={() => markAllRead()}
-                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium"
+                    disabled={markingRead}
+                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium disabled:opacity-50"
                   >
-                    Mark all read
+                    {markingRead ? 'Marking...' : 'Mark all read'}
                   </button>
                 )}
                 <button
@@ -125,13 +121,9 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {notifications.map((notification: any) => (
-                    <div
-                      key={notification.id}
-                      className={`bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-3.5 cursor-pointer hover:shadow-md transition-all ${
-                        !notification.read ? 'border-l-4 border-brand-500 bg-brand-50/30 dark:bg-brand-900/10' : ''
-                      }`}
-                    >
+                  {notifications.map((notification: any) => {
+                    const href = getNotificationHref(notification);
+                    const inner = (
                       <div className="flex items-center space-x-3">
                         {getNotificationIcon(notification.type)}
                         <div className="flex-1 min-w-0">
@@ -151,8 +143,20 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
                           <div className="w-2 h-2 bg-brand-500 rounded-full flex-shrink-0"></div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                    const base = `block bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-3.5 hover:shadow-md transition-all ${
+                      !notification.read ? 'border-l-4 border-brand-500 bg-brand-50/30 dark:bg-brand-900/10' : ''
+                    }`;
+                    return href ? (
+                      <Link key={notification.id} href={href} onClick={onClose} className={base}>
+                        {inner}
+                      </Link>
+                    ) : (
+                      <div key={notification.id} className={base}>
+                        {inner}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
