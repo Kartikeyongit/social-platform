@@ -330,10 +330,27 @@ The app will be available at:
 
 ## 🧪 Testing
 
-```bash
-# Run the seed to populate 100 posts
-cd packages/api && npx prisma db seed
+Automated black-box suites run against a freshly built API server (25 integrity
+checks, 7 WebSocket checks, 5 explore/trending smoke checks, plus a DataLoader
+query-count check). The harness boots `dist/index.js`, waits for it to be
+ready, runs each suite, then deletes every test user it created.
 
+```bash
+# Build the API, then run ALL integration suites (requires local Postgres + seed)
+cd packages/api
+npx prisma db seed          # populate seed data used by the suites
+pnpm test                   # integrity + subscriptions + smoke
+
+# Query-count check (boots its own in-process server)
+pnpm test:perf              # asserts ~8 DB queries per feed request
+```
+
+CI (`.github/workflows/ci.yml`) runs the integration suites against a fresh
+PostgreSQL 16 service container and builds the web app on every push/PR.
+
+Manual API exploration:
+
+```bash
 # Access GraphQL playground
 open http://localhost:4000/graphql
 

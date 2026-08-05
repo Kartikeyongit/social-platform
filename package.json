@@ -2,6 +2,7 @@
   "name": "social-platform",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.1.3",
   "scripts": {
     "dev": "concurrently \"pnpm --filter @social/api dev\" \"pnpm --filter @social/web dev\"",
     "build": "pnpm --filter @social/shared build && pnpm --filter @social/api build && pnpm --filter @social/web build",

@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: API integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: social
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/social?schema=public
+      JWT_SECRET: ci-test-secret-not-real
+      REDIS_URL: redis://localhost:6379
+      CLOUDINARY_CLOUD_NAME: ci-dummy
+      CLOUDINARY_API_KEY: ci-dummy
+      CLOUDINARY_API_SECRET: ci-dummy
+      CORS_ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        working-directory: packages/api
+        run: npx prisma generate
+      - run: pnpm --filter @social/shared build
+      - run: pnpm --filter @social/api build
+      - name: Apply migrations
+        working-directory: packages/api
+        run: npx prisma migrate deploy
+      - name: Seed database
+        working-directory: packages/api
+        run: npx prisma db seed
+      - name: Run integration suites
+        working-directory: packages/api
+        run: node tests/run-tests.mjs
+
+  web-build:
+    name: Web build (prerender + typecheck)
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/graphql
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @social/shared build
+      - run: pnpm --filter @social/web build
