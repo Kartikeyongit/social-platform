@@ -38,7 +38,7 @@
 - 👤 **User Profiles** with bio, avatar, followers/following counts
 - 🔗 **Follow/Unfollow** other users
 - 📊 **Infinite Scroll Feed** with cursor-based pagination
-- 🔍 **Explore Page** - trending hashtags, popular posts, user search
+- 🔍 **Explore & Trending** - user/hashtag search, popular posts, trending hashtag leaderboard
 
 ### Real-Time Features
 - 💌 **Direct Messaging** between users with real-time WebSocket delivery
@@ -47,8 +47,8 @@
 
 ### AI & ML Features
 - 🧠 **AI Hashtag Suggestions** - TF-IDF based content analysis
-- 🎯 **Personalized Recommendations** - content-based filtering
-- 📈 **Trending Detection** - velocity-based trending topics
+- 🎯 **Popular Posts** - highest-liked posts ranked on the Explore page
+- 📈 **Trending Hashtags** - most-posted hashtags ranked with post counts
 
 ### Premium UX
 - 🌙 **Dark Mode** with persistent theme toggle
@@ -195,7 +195,7 @@ social-platform/
 ### Prerequisites
 - Node.js 20+
 - pnpm (`npm install -g pnpm`)
-- Docker Desktop (for local PostgreSQL + Redis)
+- Docker Desktop (optional, for local Redis; PostgreSQL runs externally)
 
 ### Quick Start
 
@@ -274,13 +274,10 @@ The app will be available at:
 
 ## 📈 Performance
 
-| Operation | Performance |
-|-----------|-------------|
-| Feed generation (cached) | < 50ms |
-| Post creation | < 100ms |
-| Message delivery | < 2s (polling) |
-| Image upload + CDN | < 3s |
-| Infinite scroll load | < 500ms |
+- Cursor-based pagination with composite cursors (no offset scans)
+- DataLoader batching eliminates N+1 queries on counts and follow/like flags
+- Redis-cached trending hashtags (300s TTL) with graceful degradation when Redis is unavailable
+- pg_trgm GIN indexes for fast case-insensitive search
 
 ---
 
@@ -325,9 +322,9 @@ The app will be available at:
 - Excellent developer experience
 
 ### Why Redis?
-- Sub-millisecond caching for feed generation
-- Sorted sets for trending hashtags
-- Session and rate limiting ready
+- Trending-hashtag caching (with graceful fallback when unavailable)
+- Rate limiting counters
+- Ready for caching/session use in production
 
 ---
 
