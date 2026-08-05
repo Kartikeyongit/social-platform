@@ -142,6 +142,7 @@ export default function HomePage() {
             key={post.id}
             post={post}
             onCommentClick={() => toggleComments(post.id)}
+            onDeleted={() => setAllPosts(prev => prev.filter(p => p.id !== post.id))}
           >
             <CommentSection
               postId={post.id}

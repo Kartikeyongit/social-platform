@@ -80,6 +80,12 @@ export const typeDefs = `#graphql
     cursor: String!
   }
 
+  type Conversation {
+    user: User!
+    lastMessage: Message!
+    unreadCount: Int!
+  }
+
   type Notification {
     id: ID!
     type: String!
@@ -134,7 +140,7 @@ export const typeDefs = `#graphql
     userPosts(username: String!, limit: Int, cursor: String): PostConnection!
     
     # Messages
-    conversations(limit: Int, cursor: String): [User!]!
+    conversations(limit: Int, cursor: String): [Conversation!]!
     messages(receiverId: ID!, limit: Int, cursor: String): MessageConnection!
     
     # Notifications
@@ -181,6 +187,7 @@ export const typeDefs = `#graphql
     # Messages
     sendMessage(input: SendMessageInput!): Message!
     markMessageRead(messageId: ID!): Boolean!
+    markConversationRead(receiverId: ID!): Boolean!
     
     # Notifications
     markNotificationRead(notificationId: ID!): Boolean!

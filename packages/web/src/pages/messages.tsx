@@ -9,13 +9,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
-const GET_FOLLOWING = gql`
-  query GetFollowing($username: String!) {
-    following(username: $username) {
-      id
-      username
-      displayName
-      avatarUrl
+const GET_CONVERSATIONS = gql`
+  query GetConversations($limit: Int) {
+    conversations(limit: $limit) {
+      user { id username displayName avatarUrl }
+      lastMessage { id content read createdAt sender { id username } }
+      unreadCount
     }
   }
 `;
@@ -49,6 +48,12 @@ const SEND_MESSAGE = gql`
   }
 `;
 
+const MARK_CONVERSATION_READ = gql`
+  mutation MarkConversationRead($receiverId: ID!) {
+    markConversationRead(receiverId: $receiverId)
+  }
+`;
+
 const NEW_MESSAGE_SUB = gql`
   subscription NewMessage {
     newMessage {
@@ -62,6 +67,8 @@ const NEW_MESSAGE_SUB = gql`
   }
 `;
 
+const CONVERSATIONS_LIMIT = 50;
+
 export default function MessagesPage() {
   const { user } = useAuth();
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -69,9 +76,14 @@ export default function MessagesPage() {
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: followingData, loading: followingLoading, error: followingError, refetch: refetchFollowing } = useQuery(GET_FOLLOWING, {
-    variables: { username: user?.username || '' },
-    skip: !user?.username,
+  const {
+    data: convData,
+    loading: convLoading,
+    error: convError,
+    refetch: refetchConversations,
+  } = useQuery(GET_CONVERSATIONS, {
+    variables: { limit: CONVERSATIONS_LIMIT },
+    fetchPolicy: 'network-only',
   });
 
   const { data: messagesData, loading: messagesLoading, error: messagesError, refetch } = useQuery(GET_MESSAGES, {
@@ -80,26 +92,32 @@ export default function MessagesPage() {
     fetchPolicy: 'network-only',
   });
 
+  const [markConversationRead] = useMutation(MARK_CONVERSATION_READ);
+
   useSubscription(NEW_MESSAGE_SUB, {
     onData: ({ client, data }) => {
       const msg = data.data?.newMessage;
-      if (!msg || !selectedUser) return;
-      if (msg.sender.id !== selectedUser.id && msg.receiver.id !== selectedUser.id) return;
-      client.cache.updateQuery({
-        query: GET_MESSAGES,
-        variables: { receiverId: selectedUser.id, limit: 100 },
-      }, (existing: any) => {
-        if (!existing?.messages?.edges?.some((e: any) => e.node.id === msg.id)) {
-          return {
-            ...existing,
-            messages: {
-              ...existing.messages,
-              edges: [...existing.messages.edges, { __typename: 'MessageEdge', cursor: msg.id, node: msg }],
-            },
-          };
-        }
-        return existing;
-      });
+      if (!msg) return;
+      const isOpenThread = selectedUser && (msg.sender.id === selectedUser.id || msg.receiver.id === selectedUser.id);
+      if (isOpenThread) {
+        client.cache.updateQuery({
+          query: GET_MESSAGES,
+          variables: { receiverId: selectedUser.id, limit: 100 },
+        }, (existing: any) => {
+          if (!existing?.messages?.edges?.some((e: any) => e.node.id === msg.id)) {
+            return {
+              ...existing,
+              messages: {
+                ...existing.messages,
+                edges: [...existing.messages.edges, { __typename: 'MessageEdge', cursor: msg.id, node: msg }],
+              },
+            };
+          }
+          return existing;
+        });
+        markConversationRead({ variables: { receiverId: selectedUser.id } });
+      }
+      refetchConversations();
     },
   });
 
@@ -108,7 +126,7 @@ export default function MessagesPage() {
   const handleSend = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageInput.trim() || !selectedUser || sendingMessage) return;
-    
+
     try {
       await sendMessage({
         variables: {
@@ -120,12 +138,13 @@ export default function MessagesPage() {
       });
       setMessageInput('');
       setLastRefresh(Date.now());
+      refetchConversations();
       // Force immediate refetch
       setTimeout(() => refetch(), 300);
     } catch (error) {
       toast.error('Failed to send message');
     }
-  }, [messageInput, selectedUser, sendingMessage, sendMessage, refetch]);
+  }, [messageInput, selectedUser, sendingMessage, sendMessage, refetch, refetchConversations]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -134,49 +153,83 @@ export default function MessagesPage() {
     }
   }, [messagesData, lastRefresh]);
 
-  const following = followingData?.following || [];
+  const openConversation = (conv: any) => {
+    setSelectedUser(conv.user);
+    if (conv.unreadCount > 0) {
+      markConversationRead({ variables: { receiverId: conv.user.id } });
+      refetchConversations();
+    }
+  };
+
+  const conversations = convData?.conversations || [];
   const messages = messagesData?.messages?.edges?.map((e: any) => e.node) || [];
 
   return (
     <div className="">
       <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft flex flex-col md:flex-row md:h-[644px] h-auto overflow-hidden">
-        {/* Following List */}
+        {/* Conversations List */}
         <div className="w-full md:w-80 md:border-r border-b md:border-b-0 border-slate-200 dark:border-dark-100 flex flex-col flex-shrink-0">
           <div className="p-4 border-b border-slate-200 dark:border-dark-100">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Following</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Conversations</p>
           </div>
           <div className="overflow-y-auto flex-1 scrollbar-hide max-h-64 md:max-h-none">
-            {followingLoading ? (
+            {convLoading ? (
               <div className="p-2 space-y-1">{[...Array(4)].map((_,i)=><div key={i} className="p-3 animate-pulse"><div className="flex items-center space-x-3"><div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"/><div className="space-y-2 flex-1"><div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-24"/><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-16"/></div></div></div>)}</div>
-            ) : followingError ? (
+            ) : convError ? (
               <div className="p-4">
                 <ErrorState
-                  title="Couldn't load people"
-                  message={followingError.message}
-                  onRetry={() => refetchFollowing()}
+                  title="Couldn't load conversations"
+                  message={convError.message}
+                  onRetry={() => refetchConversations()}
                 />
               </div>
-            ) : following.length === 0 ? (
+            ) : conversations.length === 0 ? (
               <div className="p-4">
                 <EmptyState
-                  icon={<Icons.Profile className="w-8 h-8" />}
-                  title="Not following anyone yet"
-                  description="Follow people to start messaging them."
-                  action={{ label: 'Discover people', href: '/explore' }}
+                  icon={<Icons.Messages className="w-8 h-8" />}
+                  title="No conversations yet"
+                  description="Send a message to someone you follow to start chatting."
+                  action={{ label: 'Find people', href: '/explore' }}
                 />
               </div>
             ) : (
               <div className="space-y-0.5 p-2">
-                {following.map((person: any) => (
-                  <div key={person.id} onClick={() => setSelectedUser(person)}
-                    className={`p-3 rounded-2xl cursor-pointer transition-colors ${selectedUser?.id === person.id ? 'bg-brand-50 dark:bg-brand-900/20' : 'hover:bg-slate-50 dark:hover:bg-dark-50'}`}>
-                    <div className="flex items-center space-x-3">
-                      {person.avatarUrl ? <img src={person.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0"/> :
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">{person.displayName.charAt(0).toUpperCase()}</div>}
-                      <div className="flex-1 min-w-0"><p className="font-medium text-sm text-slate-900 dark:text-white truncate">{person.displayName}</p><p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{person.username}</p></div>
+                {conversations.map((conv: any) => {
+                  const isActive = selectedUser?.id === conv.user.id;
+                  const last = conv.lastMessage;
+                  const preview = last?.content?.length > 40 ? `${last.content.slice(0, 40)}…` : (last?.content || '');
+                  const isMine = last?.sender?.id === user?.id;
+                  return (
+                    <div key={conv.user.id} onClick={() => openConversation(conv)}
+                      className={`p-3 rounded-2xl cursor-pointer transition-colors ${isActive ? 'bg-brand-50 dark:bg-brand-900/20' : 'hover:bg-slate-50 dark:hover:bg-dark-50'}`}>
+                      <div className="flex items-center space-x-3">
+                        {conv.user.avatarUrl ? <img src={conv.user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0"/> :
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">{conv.user.displayName.charAt(0).toUpperCase()}</div>}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm text-slate-900 dark:text-white truncate">{conv.user.displayName}</p>
+                            {last && (
+                              <span className="text-[10px] text-slate-400 flex-shrink-0 ml-2">
+                                {formatDistanceToNow(new Date(last.createdAt), { addSuffix: true })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                              {isMine && <span className="text-brand-500">You: </span>}
+                              {preview}
+                            </p>
+                            {conv.unreadCount > 0 && (
+                              <span className="ml-2 flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -239,7 +292,7 @@ export default function MessagesPage() {
               <EmptyState
                 icon={<Icons.Messages className="w-8 h-8" />}
                 title="Select a conversation"
-                description="Choose someone you follow to start chatting"
+                description="Pick a chat from the list to start messaging"
               />
             </div>
           )}

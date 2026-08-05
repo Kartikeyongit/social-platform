@@ -34,6 +34,7 @@ async function main() {
   check('email visible to self', ra.user.email === `${uA}@test.com`);
 
   const tokenA = ra.token, tokenB = rb.token;
+  const userAId = ra.user.id;
   const userBId = rb.user.id;
 
   // Public queries must not leak email
@@ -110,9 +111,19 @@ async function main() {
   check('messages: page3=5 (50..54)', m3c.length === 5 && m3c[0] === 50 && m3c[4] === 54, JSON.stringify(m3c));
   check('messages: strictly ascending no dupes', isAsc && noDup);
 
-  // Conversations: A has exactly 1 partner (B), ordered
-  const conv = await gql(`query C{conversations(limit:10){id username}}`, {}, tokenA);
-  check('conversations: 1 partner', conv.conversations.length === 1 && conv.conversations[0].username === uB, JSON.stringify(conv.conversations));
+  // Conversations: A has exactly 1 partner (B), ordered, with preview + unread count
+  const conv = await gql(`query C{conversations(limit:10){user{username} unreadCount lastMessage{content}}}`, {}, tokenA);
+  check('conversations: 1 partner', conv.conversations.length === 1 && conv.conversations[0].user.username === uB, JSON.stringify(conv.conversations));
+  check('conversations: preview is latest msg', conv.conversations[0].lastMessage.content === 'msg 54', JSON.stringify(conv.conversations[0].lastMessage));
+  check('conversations: unreadCount 0 (A sent them)', conv.conversations[0].unreadCount === 0, JSON.stringify(conv.conversations[0].unreadCount));
+
+  // markConversationRead clears unread for the receiver side
+  await gql(`mutation MCR($receiverId:ID!){markConversationRead(receiverId:$receiverId)}`, { receiverId: userBId }, tokenB);
+  const convB = await gql(`query C{conversations(limit:10){user{username} unreadCount}}`, {}, tokenB);
+  check('conversations: B sees 1 partner, 55 unread', convB.conversations.length === 1 && convB.conversations[0].user.username === uA && convB.conversations[0].unreadCount === 55, JSON.stringify(convB.conversations));
+  await gql(`mutation MCR($receiverId:ID!){markConversationRead(receiverId:$receiverId)}`, { receiverId: userAId }, tokenB);
+  const convB2 = await gql(`query C{conversations(limit:10){unreadCount}}`, {}, tokenB);
+  check('conversations: markConversationRead clears unread', convB2.conversations[0].unreadCount === 0, JSON.stringify(convB2.conversations));
 
   // Notifications pagination (A has ~1 notification; use limit+hasNext=false sanity + composite)
   const n1 = await gql(`query N($limit:Int){notifications(limit:$limit){id}}`, { limit: 5 }, tokenB);

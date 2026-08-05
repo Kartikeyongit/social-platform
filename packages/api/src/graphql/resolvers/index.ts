@@ -248,9 +248,32 @@ export const resolvers = {
       partners = partners.slice(0, take);
 
       if (partners.length === 0) return [];
-      const users = await prisma.user.findMany({ where: { id: { in: partners.map(([id]) => id) } } });
+      const [users, unreadBySender, lastMessages] = await Promise.all([
+        prisma.user.findMany({ where: { id: { in: partners.map(([id]) => id) } } }),
+        prisma.message.groupBy({
+          by: ['senderId'],
+          where: { receiverId: userId, read: false, senderId: { in: partners.map(([id]) => id) } },
+          _count: { id: true },
+        }),
+        Promise.all(
+          partners.map(([pid]) =>
+            prisma.message.findFirst({
+              where: { OR: [{ senderId: userId, receiverId: pid }, { senderId: pid, receiverId: userId }] },
+              orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+              include: { sender: true, receiver: true },
+            })
+          )
+        ),
+      ]);
+      const unreadMap = new Map(unreadBySender.map((u) => [u.senderId, u._count.id]));
       const order = new Map(partners.map(([id], i) => [id, i]));
-      return users.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+      return users
+        .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+        .map((user, i) => ({
+          user,
+          lastMessage: lastMessages[i]!,
+          unreadCount: unreadMap.get(user.id) ?? 0,
+        }));
     },
     
     messages: async (_: any, { receiverId, limit, cursor }: any, { userId }: Context) => {
@@ -550,6 +573,15 @@ export const resolvers = {
     markMessageRead: async (_: any, { messageId }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');
       await prisma.message.updateMany({ where: { id: messageId, receiverId: userId }, data: { read: true } });
+      return true;
+    },
+
+    markConversationRead: async (_: any, { receiverId }: any, { userId }: Context) => {
+      if (!userId) throw new GraphQLError('Not authenticated');
+      await prisma.message.updateMany({
+        where: { receiverId: userId, senderId: receiverId, read: false },
+        data: { read: true },
+      });
       return true;
     },
     

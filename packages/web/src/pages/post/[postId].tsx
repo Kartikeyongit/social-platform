@@ -117,7 +117,7 @@ export default function PostDetailPage() {
         <span className="text-sm">Back</span>
       </button>
 
-      <PostCard post={post}>
+      <PostCard post={post} onDeleted={() => router.push('/home')}>
         {/* Comments */}
         <div className="mt-4 space-y-4">
           {/* Comment Input */}

@@ -270,7 +270,7 @@ export default function ExplorePage() {
             </div>
           )}
 
-          {posts.map((post: any) => <PostCard key={post.id} post={post} />)}
+          {posts.map((post: any) => <PostCard key={post.id} post={post} onDeleted={() => setPosts(prev => prev.filter(p => p.id !== post.id))} />)}
 
           {!loading && !error && posts.length === 0 && (
             <EmptyState

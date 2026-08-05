@@ -8,10 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
 import { UserX, Settings } from 'lucide-react';
-import { Hashtag } from '@/components/ui/Hashtag';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
+import { PostCard } from '@/components/post/PostCard';
 
 const GET_USER = gql`
   query GetUser($username: String!) {
@@ -32,11 +32,13 @@ const GET_USER = gql`
         node {
           id
           content
+          mediaUrls
           hashtags
           likeCount
           commentCount
+          isLiked
           createdAt
-          author { id username displayName }
+          author { id username displayName avatarUrl }
         }
       }
     }
@@ -244,35 +246,14 @@ export default function ProfilePage() {
         />
       ) : (
         <div className="space-y-4">
-          {posts.map((post: any, index: number) => (
+          {posts.map((post: any) => (
             <motion.div
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-6"
+              transition={{ delay: 0.05 * posts.indexOf(post) }}
             >
-              <p className="text-slate-800 dark:text-slate-200 mb-3">{post.content}</p>
-              {post.hashtags?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {post.hashtags.map((tag: string) => (
-                    <Hashtag key={tag} name={tag} />
-                  ))}
-                </div>
-              )}
-              <div className="flex items-center space-x-6 text-sm text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-100 dark:border-dark-100">
-                <span className="flex items-center space-x-1">
-                  <Icons.Like className="w-4 h-4" />
-                  <span>{post.likeCount}</span>
-                </span>
-                <span className="flex items-center space-x-1">
-                  <Icons.Comment className="w-4 h-4" />
-                  <span>{post.commentCount}</span>
-                </span>
-                <span className="text-xs">
-                  {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-                </span>
-              </div>
+              <PostCard post={post} onDeleted={() => refetch()} />
             </motion.div>
           ))}
         </div>
