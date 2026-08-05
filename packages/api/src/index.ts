@@ -18,7 +18,10 @@ import { getUserIdFromAuthHeader, verifyToken } from './utils/auth';
 import { config } from './utils/config';
 
 const prisma = new PrismaClient();
-const redis = new Redis(config.redisUrl);
+const redis = new Redis(config.redisUrl, {
+  maxRetriesPerRequest: 2,
+  retryStrategy: (times) => Math.min(times * 200, 2000),
+});
 redis.on('error', (err) => console.error('Redis error:', err.message));
 
 interface Context {

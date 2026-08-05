@@ -139,18 +139,59 @@ async function main() {
   await prisma.hashtag.deleteMany();
 
   let count = 0;
+  const sampleComments = [
+    'This is amazing! 🔥',
+    'Love this!',
+    'Great post 👏',
+    'Thanks for sharing!',
+    'So true!',
+    'Awesome content as always',
+    'I totally agree!',
+    'This made my day 😄',
+    'Incredible work!',
+    'Keep it up!',
+  ];
+
   for (let i = 0; i < all100Posts.length; i++) {
     const post = all100Posts[i];
     const author = users[i % users.length];
-    await prisma.post.create({
+    const created = await prisma.post.create({
       data: {
         content: post.content,
         hashtags: post.hashtags,
         mediaUrls: post.mediaUrls,
         authorId: author.id,
-        likeCount: Math.floor(Math.random() * 150) + 5,
-        commentCount: Math.floor(Math.random() * 30) + 1,
       },
+    });
+
+    // Real comments so commentCount always matches the data
+    const commentCount = Math.floor(Math.random() * 4) + 1;
+    const comments = Array.from({ length: commentCount }, () => ({
+      postId: created.id,
+      authorId: users[Math.floor(Math.random() * users.length)].id,
+      content: sampleComments[Math.floor(Math.random() * sampleComments.length)],
+    }));
+    if (comments.length > 0) {
+      await prisma.comment.createMany({ data: comments });
+    }
+
+    // Real likes (unique per post/user) so likeCount always matches the data
+    const maxLikes = users.length - 1;
+    const likeCount = Math.min(Math.floor(Math.random() * 8) + 2, maxLikes);
+    const likeUserIds = new Set<string>();
+    while (likeUserIds.size < likeCount) {
+      const liker = users[Math.floor(Math.random() * users.length)];
+      if (liker.id !== author.id) likeUserIds.add(liker.id);
+    }
+    if (likeUserIds.size > 0) {
+      await prisma.like.createMany({
+        data: [...likeUserIds].map((userId) => ({ postId: created.id, userId })),
+      });
+    }
+
+    await prisma.post.update({
+      where: { id: created.id },
+      data: { likeCount: likeUserIds.size, commentCount: comments.length },
     });
     count++;
   }
