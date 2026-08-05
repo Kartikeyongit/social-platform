@@ -8,26 +8,23 @@ import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHt
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
-import { PrismaClient } from '@prisma/client';
-import Redis from 'ioredis';
+import type { PrismaClient } from '@prisma/client';
+import type Redis from 'ioredis';
 import { typeDefs } from './graphql/typeDefs';
 import { resolvers } from './graphql/resolvers';
 import { upload, hasValidImageSignature } from './utils/upload';
 import { uploadBuffer } from './utils/cloudinary';
 import { getUserIdFromAuthHeader, verifyToken } from './utils/auth';
 import { config } from './utils/config';
-
-const prisma = new PrismaClient();
-const redis = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: 2,
-  retryStrategy: (times) => Math.min(times * 200, 2000),
-});
-redis.on('error', (err) => console.error('Redis error:', err.message));
+import { prisma } from './utils/db';
+import { redis } from './utils/redis';
+import { createLoaders, Loaders } from './utils/loaders';
 
 interface Context {
   prisma: PrismaClient;
   redis: Redis;
   userId?: string;
+  loaders: Loaders;
 }
 
 async function startServer() {
@@ -58,12 +55,13 @@ async function startServer() {
   const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql' });
   const schema = makeExecutableSchema({ typeDefs, resolvers });
   const serverCleanup = useServer({ schema, context: async (ctx) => {
+    const loaders = createLoaders(prisma);
     const token = ctx.connectionParams?.authToken as string | undefined;
     if (token) {
       const userId = verifyToken(token);
-      if (userId) return { userId, prisma, redis };
+      if (userId) return { userId, prisma, redis, loaders };
     }
-    return { prisma, redis };
+    return { prisma, redis, loaders };
   }}, wsServer);
 
   const server = new ApolloServer<Context>({
@@ -110,7 +108,7 @@ async function startServer() {
   app.use('/graphql', apiLimiter, expressMiddleware(server, {
     context: async ({ req }) => {
       const userId = getUserIdFromAuthHeader(req.headers.authorization);
-      return { userId: userId || undefined, prisma, redis };
+      return { userId: userId || undefined, prisma, redis, loaders: createLoaders(prisma) };
     },
   }));
 

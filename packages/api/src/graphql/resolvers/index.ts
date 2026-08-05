@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import Redis from 'ioredis';
+import type { PrismaClient } from '@prisma/client';
+import type Redis from 'ioredis';
 import bcrypt from 'bcryptjs';
 import { GraphQLError } from 'graphql';
 import {
@@ -12,32 +12,15 @@ import {
 } from '@social/shared';
 import { suggestHashtags } from '../../utils/aiSuggestions';
 import { signToken } from '../../utils/auth';
-import { config } from '../../utils/config';
-
-const prisma = new PrismaClient();
-const redis = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: 2,
-  retryStrategy: (times) => Math.min(times * 200, 2000),
-});
-redis.on('error', (err) => console.error('Redis error:', err.message));
-
-// Cache failures must never break core features - degrade to direct DB access
-const safeRedis = {
-  get: async (key: string): Promise<string | null> => {
-    try { return await redis.get(key); } catch { return null; }
-  },
-  setex: async (key: string, seconds: number, value: string): Promise<void> => {
-    try { await redis.setex(key, seconds, value); } catch { /* noop */ }
-  },
-  del: async (key: string): Promise<void> => {
-    try { await redis.del(key); } catch { /* noop */ }
-  },
-};
+import { prisma } from '../../utils/db';
+import { safeRedis } from '../../utils/redis';
+import { createLoaders, Loaders } from '../../utils/loaders';
 
 interface Context {
   prisma: PrismaClient;
   redis: Redis;
   userId?: string;
+  loaders: Loaders;
 }
 
 function validate<T>(schema: { safeParse: (data: unknown) => { success: boolean; error?: { issues: { path: (string | number)[]; message: string }[] } } }, data: T): T {
@@ -582,25 +565,22 @@ export const resolvers = {
       if (!userId || parent.id !== userId) return null;
       return parent.email;
     },
-    followerCount: async (parent: any) => prisma.follow.count({ where: { followingId: parent.id } }),
-    followingCount: async (parent: any) => prisma.follow.count({ where: { followerId: parent.id } }),
-    postCount: async (parent: any) => prisma.post.count({ where: { authorId: parent.id } }),
-    isFollowing: async (parent: any, _: any, { userId }: Context) => {
+    followerCount: (parent: any, _: any, { loaders }: Context) =>
+      loaders.followerCountLoader.load(parent.id),
+    followingCount: (parent: any, _: any, { loaders }: Context) =>
+      loaders.followingCountLoader.load(parent.id),
+    postCount: (parent: any, _: any, { loaders }: Context) =>
+      loaders.postCountLoader.load(parent.id),
+    isFollowing: (parent: any, _: any, { userId, loaders }: Context) => {
       if (!userId || userId === parent.id) return false;
-      const follow = await prisma.follow.findUnique({
-        where: { followerId_followingId: { followerId: userId, followingId: parent.id } },
-      });
-      return !!follow;
+      return loaders.isFollowingLoader.load(`${userId}:${parent.id}`);
     },
   },
   
   Post: {
-    isLiked: async (parent: any, _: any, { userId }: Context) => {
+    isLiked: (parent: any, _: any, { userId, loaders }: Context) => {
       if (!userId) return false;
-      const like = await prisma.like.findUnique({
-        where: { postId_userId: { postId: parent.id, userId } },
-      });
-      return !!like;
+      return loaders.isLikedLoader.load(`${parent.id}:${userId}`);
     },
     comments: async (parent: any, { limit, cursor }: any) => {
       const take = clampLimit(limit, 10, 30);
@@ -619,6 +599,6 @@ export const resolvers = {
   },
   
   Notification: {
-    actor: async (parent: any) => prisma.user.findUnique({ where: { id: parent.actorId } }),
+    actor: (parent: any, _: any, { loaders }: Context) => loaders.userByIdLoader.load(parent.actorId),
   },
 };
