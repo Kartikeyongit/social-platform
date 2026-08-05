@@ -4,7 +4,6 @@ dotenv.config({ quiet: true });
 
 const requiredEnvVars = [
   'DATABASE_URL',
-  'REDIS_URL',
   'JWT_SECRET',
   'CLOUDINARY_CLOUD_NAME',
   'CLOUDINARY_API_KEY',
@@ -27,7 +26,6 @@ if (missing.length > 0) {
 
 export const config = {
   databaseUrl: process.env.DATABASE_URL as string,
-  redisUrl: process.env.REDIS_URL as string,
   jwtSecret: process.env.JWT_SECRET as string,
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME as string,

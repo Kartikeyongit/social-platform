@@ -9,7 +9,6 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
 import type { PrismaClient } from '@prisma/client';
-import type Redis from 'ioredis';
 import { typeDefs } from './graphql/typeDefs';
 import { resolvers } from './graphql/resolvers';
 import { upload, hasValidImageSignature } from './utils/upload';
@@ -17,12 +16,10 @@ import { uploadBuffer } from './utils/cloudinary';
 import { getUserIdFromAuthHeader, verifyToken } from './utils/auth';
 import { config } from './utils/config';
 import { prisma } from './utils/db';
-import { redis } from './utils/redis';
 import { createLoaders, Loaders } from './utils/loaders';
 
 interface Context {
   prisma: PrismaClient;
-  redis: Redis;
   userId?: string;
   loaders: Loaders;
 }
@@ -59,9 +56,9 @@ async function startServer() {
     const token = ctx.connectionParams?.authToken as string | undefined;
     if (token) {
       const userId = verifyToken(token);
-      if (userId) return { userId, prisma, redis, loaders };
+      if (userId) return { userId, prisma, loaders };
     }
-    return { prisma, redis, loaders };
+    return { prisma, loaders };
   }}, wsServer);
 
   const server = new ApolloServer<Context>({
@@ -108,7 +105,7 @@ async function startServer() {
   app.use('/graphql', apiLimiter, expressMiddleware(server, {
     context: async ({ req }) => {
       const userId = getUserIdFromAuthHeader(req.headers.authorization);
-      return { userId: userId || undefined, prisma, redis, loaders: createLoaders(prisma) };
+      return { userId: userId || undefined, prisma, loaders: createLoaders(prisma) };
     },
   }));
 

@@ -1,5 +1,4 @@
 import type { PrismaClient } from '@prisma/client';
-import type Redis from 'ioredis';
 import bcrypt from 'bcryptjs';
 import { GraphQLError } from 'graphql';
 import {
@@ -13,13 +12,11 @@ import {
 import { suggestHashtags } from '../../utils/aiSuggestions';
 import { signToken } from '../../utils/auth';
 import { prisma } from '../../utils/db';
-import { safeRedis } from '../../utils/redis';
 import { createLoaders, Loaders } from '../../utils/loaders';
 import { pubsub, notificationTopic, messageTopic } from '../../utils/pubsub';
 
 interface Context {
   prisma: PrismaClient;
-  redis: Redis;
   userId?: string;
   loaders: Loaders;
 }
@@ -181,11 +178,7 @@ export const resolvers = {
     
     trendingHashtags: async (_: any, { limit = 10 }: any) => {
       const take = clampLimit(limit, 10, 30);
-      const cached = await safeRedis.get('trending:hashtags');
-      if (cached) return JSON.parse(cached);
-      
       const hashtags = await prisma.hashtag.findMany({ orderBy: { postCount: 'desc' }, take });
-      await safeRedis.setex('trending:hashtags', 300, JSON.stringify(hashtags));
       return hashtags;
     },
     
@@ -419,9 +412,6 @@ export const resolvers = {
         }
         return created;
       });
-      if (post.hashtags.length > 0) {
-        await safeRedis.del('trending:hashtags');
-      }
       return post;
     },
     
@@ -600,9 +590,6 @@ export const resolvers = {
           }
         }
       });
-      if (post.hashtags.length > 0) {
-        await safeRedis.del('trending:hashtags');
-      }
       return true;
     },
   },

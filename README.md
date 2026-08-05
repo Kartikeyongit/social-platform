@@ -6,7 +6,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![GraphQL](https://img.shields.io/badge/GraphQL-Apollo-pink?logo=graphql)](https://www.apollographql.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-7-red?logo=redis)](https://redis.io/)
 [![Prisma](https://img.shields.io/badge/Prisma-5-teal?logo=prisma)](https://www.prisma.io/)
 [![Tailwind](https://img.shields.io/badge/Tailwind-3.4-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 [![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel)](https://vercel.com)
@@ -78,7 +77,6 @@
 | **Apollo Server** | GraphQL API server |
 | **Prisma ORM** | Database ORM & migrations |
 | **PostgreSQL** | Primary database (Supabase) |
-| **Redis** | Caching & real-time (Upstash) |
 | **GraphQL Subscriptions** | WebSocket real-time updates |
 | **Cloudinary** | Image upload & CDN |
 
@@ -88,7 +86,6 @@
 | **Vercel** | Frontend hosting |
 | **Render** | Backend API hosting |
 | **Supabase** | Managed PostgreSQL |
-| **Upstash** | Managed Redis |
 | **Cloudinary** | Image CDN |
 
 ---
@@ -114,16 +111,15 @@
 │ │ - Real-time Subscriptions (WebSocket)               │   │
 │ │ - File Upload (Cloudinary)                          │   │
 │ │ - AI Hashtag Suggestions                            │   │
-│ └──────┬───────────────────────────┬──────────────────┘   │
-└────────┼───────────────────────────┼──────────────────────┘
-         │                           │
-┌────────▼──────────┐    ┌───────────▼──────────┐
-│ PostgreSQL        │    │ Redis (Upstash)      │
-│ (Supabase)        │    │ - Feed Caching       │
-│ - User Data       │    │ - Hashtag Trends     │
-│ - Posts/Comments  │    │ - Session Store      │
-│ - Follows/Likes   │    │                      │
-└───────────────────┘    └──────────────────────┘
+│ └──────────────────────┬──────────────────────────────┘   │
+└────────────────────────┼───────────────────────────────────┘
+                         │
+┌────────────────────────▼──────────────────────────────────┐
+│ PostgreSQL (Supabase)                                     │
+│ - User Data                                              │
+│ - Posts/Comments                                         │
+│ - Follows/Likes                                          │
+└───────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
 │ Image Pipeline (Cloudinary)                                  │
@@ -182,7 +178,6 @@ social-platform/
 │           ├── validation/     # Zod schemas
 │           └── utils/          # Shared helpers
 │
-├── docker-compose.yml          # Local PostgreSQL + Redis
 ├── .node-version               # Node.js version for Render
 ├── pnpm-workspace.yaml         # Monorepo config
 └── README.md
@@ -195,7 +190,6 @@ social-platform/
 ### Prerequisites
 - Node.js 20+
 - pnpm (`npm install -g pnpm`)
-- Docker Desktop (optional, for local Redis; PostgreSQL runs externally)
 
 ### Quick Start
 
@@ -204,22 +198,19 @@ social-platform/
 git clone https://github.com/Kartikeyongit/social-platform.git
 cd social-platform
 
-# 2. Start PostgreSQL & Redis
-docker-compose up -d
-
-# 3. Install dependencies
+# 2. Install dependencies
 pnpm install
 
-# 4. Build shared package
+# 3. Build shared package
 cd packages/shared && pnpm build && cd ../..
 
-# 5. Setup database
+# 4. Setup database
 cd packages/api
 pnpm db:migrate
 pnpm db:seed
 cd ../..
 
-# 6. Start development servers
+# 5. Start development servers
 pnpm dev
 ```
 
@@ -263,7 +254,6 @@ The app will be available at:
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | Supabase connection string |
-| `REDIS_URL` | Upstash Redis URL |
 | `JWT_SECRET` | Random secret key |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
@@ -276,7 +266,6 @@ The app will be available at:
 
 - Cursor-based pagination with composite cursors (no offset scans)
 - DataLoader batching eliminates N+1 queries on counts and follow/like flags
-- Redis-cached trending hashtags (300s TTL) with graceful degradation when Redis is unavailable
 - pg_trgm GIN indexes for fast case-insensitive search
 
 ---
@@ -320,11 +309,6 @@ The app will be available at:
 - Automatic migrations
 - Relation queries made simple
 - Excellent developer experience
-
-### Why Redis?
-- Trending-hashtag caching (with graceful fallback when unavailable)
-- Rate limiting counters
-- Ready for caching/session use in production
 
 ---
 
@@ -383,7 +367,7 @@ MIT License - feel free to use this for learning or as a foundation for your own
 - **Distributed System Design** - Monorepo architecture, microservices patterns
 - **Real-Time Data Sync** - WebSocket subscriptions, polling strategies
 - **ML Integration** - TF-IDF content analysis in JavaScript
-- **Performance Optimization** - Redis caching, pagination, image CDN
+- **Performance Optimization** - pagination, image CDN
 - **Production Deployment** - Vercel, Render, Supabase, Cloudinary
 - **UI/UX Design** - Responsive layouts, dark mode, animations
 - **Database Design** - Relational schema, migrations, seeding
