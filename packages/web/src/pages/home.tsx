@@ -54,7 +54,7 @@ const HeartBurst = () => (
 const POSTS_PER_PAGE = 10;
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const router = useRouter();
   const [content, setContent] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
@@ -132,7 +132,7 @@ export default function HomePage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setIsUploading(true); const fd = new FormData(); fd.append('image', file);
-    try { const r = await fetch(`${API_URL}/upload`, { method:'POST', body:fd }); const d = await r.json(); if (d.url) setMediaUrls([...mediaUrls, d.url]); }
+    try { const r = await fetch(`${API_URL}/upload`, { method:'POST', headers:{ Authorization:`Bearer ${token}` }, body:fd }); const d = await r.json(); if (d.url) setMediaUrls([...mediaUrls, d.url]); }
     catch { toast.error('Upload failed'); } finally { setIsUploading(false); }
   };
 

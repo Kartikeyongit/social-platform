@@ -1,17 +1,36 @@
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { GraphQLError } from 'graphql';
+import {
+  RegisterSchema,
+  LoginSchema,
+  UpdateProfileSchema,
+  CreatePostSchema,
+  CreateCommentSchema,
+  SendMessageSchema,
+} from '@social/shared';
 import { suggestHashtags } from '../../utils/aiSuggestions';
+import { signToken } from '../../utils/auth';
+import { config } from '../../utils/config';
 
 const prisma = new PrismaClient();
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new Redis(config.redisUrl);
+redis.on('error', (err) => console.error('Redis error:', err.message));
 
 interface Context {
   prisma: PrismaClient;
   redis: Redis;
   userId?: string;
+}
+
+function validate<T>(schema: { safeParse: (data: unknown) => { success: boolean; error?: { issues: { path: (string | number)[]; message: string }[] } } }, data: T): T {
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    const details = result.error?.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ');
+    throw new GraphQLError(`Invalid input: ${details}`, { extensions: { code: 'BAD_USER_INPUT' } });
+  }
+  return data;
 }
 
 export const resolvers = {
@@ -223,43 +242,47 @@ export const resolvers = {
   
   Mutation: {
     register: async (_: any, args: any) => {
+      const input = validate(RegisterSchema, args);
       const existingUser = await prisma.user.findFirst({
-        where: { OR: [{ email: args.email }, { username: args.username }] },
+        where: { OR: [{ email: input.email }, { username: input.username }] },
       });
       if (existingUser) throw new GraphQLError('Email or username already exists');
-      const passwordHash = await bcrypt.hash(args.password, 10);
+      const passwordHash = await bcrypt.hash(input.password, 10);
       const user = await prisma.user.create({
-        data: { username: args.username, email: args.email, passwordHash, displayName: args.displayName },
+        data: { username: input.username, email: input.email, passwordHash, displayName: input.displayName },
       });
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+      const token = signToken(user.id);
       return { token, user };
     },
     
     login: async (_: any, { email, password }: any) => {
-      const user = await prisma.user.findUnique({ where: { email } });
+      const input = validate(LoginSchema, { email, password });
+      const user = await prisma.user.findUnique({ where: { email: input.email } });
       if (!user) throw new GraphQLError('Invalid credentials');
-      const valid = await bcrypt.compare(password, user.passwordHash);
+      const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) throw new GraphQLError('Invalid credentials');
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+      const token = signToken(user.id);
       return { token, user };
     },
     
     updateProfile: async (_: any, { input }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');
+      const data = validate(UpdateProfileSchema, input);
       return prisma.user.update({
         where: { id: userId },
         data: {
-          ...(input.displayName && { displayName: input.displayName }),
-          ...(input.bio !== undefined && { bio: input.bio }),
-          ...(input.avatarUrl && { avatarUrl: input.avatarUrl }),
+          ...(data.displayName && data.displayName.trim() ? { displayName: data.displayName } : {}),
+          ...(data.bio !== undefined ? { bio: data.bio } : {}),
+          ...(data.avatarUrl ? { avatarUrl: data.avatarUrl } : {}),
         },
       });
     },
     
     createPost: async (_: any, { input }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');
+      const data = validate(CreatePostSchema, input);
       const post = await prisma.post.create({
-        data: { content: input.content, hashtags: input.hashtags || [], mediaUrls: input.mediaUrls || [], authorId: userId },
+        data: { content: data.content, hashtags: data.hashtags, mediaUrls: data.mediaUrls, authorId: userId },
         include: { author: true },
       });
       if (post.hashtags.length > 0) {
@@ -307,16 +330,17 @@ export const resolvers = {
     
     createComment: async (_: any, { input }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');
-      const post = await prisma.post.findUnique({ where: { id: input.postId } });
+      const data = validate(CreateCommentSchema, input);
+      const post = await prisma.post.findUnique({ where: { id: data.postId } });
       if (!post) throw new GraphQLError('Post not found');
       const comment = await prisma.comment.create({
-        data: { content: input.content, postId: input.postId, authorId: userId },
+        data: { content: data.content, postId: data.postId, authorId: userId },
         include: { author: true },
       });
-      await prisma.post.update({ where: { id: input.postId }, data: { commentCount: { increment: 1 } } });
+      await prisma.post.update({ where: { id: data.postId }, data: { commentCount: { increment: 1 } } });
       if (post.authorId !== userId) {
         await prisma.notification.create({
-          data: { userId: post.authorId, type: 'COMMENT', actorId: userId, entityId: input.postId },
+          data: { userId: post.authorId, type: 'COMMENT', actorId: userId, entityId: data.postId },
         });
       }
       return comment;
@@ -352,8 +376,12 @@ export const resolvers = {
     
     sendMessage: async (_: any, { input }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');
+      const data = validate(SendMessageSchema, input);
+      if (data.receiverId === userId) throw new GraphQLError('Cannot message yourself');
+      const receiver = await prisma.user.findUnique({ where: { id: data.receiverId } });
+      if (!receiver) throw new GraphQLError('Receiver not found');
       return prisma.message.create({
-        data: { content: input.content, senderId: userId, receiverId: input.receiverId },
+        data: { content: data.content, senderId: userId, receiverId: data.receiverId },
         include: { sender: true, receiver: true },
       });
     },
@@ -386,6 +414,10 @@ export const resolvers = {
   },
   
   User: {
+    email: (parent: any, _: any, { userId }: Context) => {
+      if (!userId || parent.id !== userId) return null;
+      return parent.email;
+    },
     followerCount: async (parent: any) => prisma.follow.count({ where: { followingId: parent.id } }),
     followingCount: async (parent: any) => prisma.follow.count({ where: { followerId: parent.id } }),
     postCount: async (parent: any) => prisma.post.count({ where: { authorId: parent.id } }),

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
+import rateLimit from 'express-rate-limit';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
@@ -9,14 +10,16 @@ import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
-import jwt from 'jsonwebtoken';
 import { typeDefs } from './graphql/typeDefs';
 import { resolvers } from './graphql/resolvers';
-import { upload } from './utils/upload';
-import { uploadToCloudinary } from './utils/cloudinary';
+import { upload, hasValidImageSignature } from './utils/upload';
+import { uploadBuffer } from './utils/cloudinary';
+import { getUserIdFromAuthHeader, verifyToken } from './utils/auth';
+import { config } from './utils/config';
 
 const prisma = new PrismaClient();
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new Redis(config.redisUrl);
+redis.on('error', (err) => console.error('Redis error:', err.message));
 
 interface Context {
   prisma: PrismaClient;
@@ -28,22 +31,34 @@ async function startServer() {
   const app = express();
   const httpServer = http.createServer(app);
 
+  // Trust proxy headers so rate limiting uses the real client IP behind Render/Vercel
+  app.set('trust proxy', 1);
+
+  const allowedOrigins = new Set([
+    ...config.corsOrigins,
+    'http://localhost:3000',
+    'http://localhost:4000',
+  ]);
+
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
+      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
       if (origin.endsWith('.vercel.app') || origin === 'https://vercel.app') return callback(null, true);
-      if (origin === 'http://localhost:3000') return callback(null, true);
-      callback(null, true);
+      return callback(null, false);
     },
     credentials: true,
   }));
 
+  const uploadLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+  const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
+
   const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql' });
   const schema = makeExecutableSchema({ typeDefs, resolvers });
   const serverCleanup = useServer({ schema, context: async (ctx) => {
-    const token = ctx.connectionParams?.authToken as string;
+    const token = ctx.connectionParams?.authToken as string | undefined;
     if (token) {
-      try { const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string }; return { userId: decoded.userId, prisma, redis }; } catch (e) {}
+      const userId = verifyToken(token);
+      if (userId) return { userId, prisma, redis };
     }
     return { prisma, redis };
   }}, wsServer);
@@ -58,52 +73,41 @@ async function startServer() {
   await server.start();
   app.use(express.json());
 
-  // Upload endpoint - uses memory storage + Cloudinary
-  app.post('/upload', (req, res) => {
+  // Upload endpoint - authenticated, rate-limited, memory storage + Cloudinary
+  app.post('/upload', uploadLimiter, (req, res) => {
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     upload.single('image')(req, res, async (err) => {
       if (err) {
         console.error('Multer error:', err.message);
-        return res.status(400).json({ error: err.message });
+        return res.status(400).json({ error: 'Invalid file upload' });
       }
       if (!req.file) {
         console.error('No file received');
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      console.log('File received:', req.file.originalname, 'Type:', req.file.mimetype, 'Size:', req.file.size);
+      if (!hasValidImageSignature(req.file.buffer)) {
+        return res.status(400).json({ error: 'File contents do not match an allowed image type' });
+      }
 
       try {
-        // Upload buffer to Cloudinary using base64 data URI
-        const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        const cloudinary = require('cloudinary').v2;
-        
-        cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dibovl6kv',
-          api_key: process.env.CLOUDINARY_API_KEY || '271466534784918',
-          api_secret: process.env.CLOUDINARY_API_SECRET || 'k5si7SFQPtlxKjIVT6CJTfmfF4M',
-        });
-
-        const result = await cloudinary.uploader.upload(base64, {
-          folder: 'social-app',
-          transformation: [{ width: 1200, height: 1200, crop: 'limit', quality: 'auto' }],
-        });
-
-        console.log('Cloudinary success:', result.secure_url);
-        return res.json({ url: result.secure_url });
-      } catch (error: any) {
-        console.error('Cloudinary error:', error.message);
-        return res.status(500).json({ error: 'Upload failed: ' + error.message });
+        const url = await uploadBuffer(req.file.buffer, req.file.mimetype);
+        return res.json({ url });
+      } catch (error) {
+        console.error('Cloudinary error:', (error as Error).message);
+        return res.status(500).json({ error: 'Upload failed' });
       }
     });
   });
 
-  app.use('/graphql', expressMiddleware(server, {
+  app.use('/graphql', apiLimiter, expressMiddleware(server, {
     context: async ({ req }) => {
-      const token = req.headers.authorization?.split(' ')[1];
-      if (token) {
-        try { const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { userId: string }; return { userId: decoded.userId, prisma, redis }; } catch (e) {}
-      }
-      return { prisma, redis };
+      const userId = getUserIdFromAuthHeader(req.headers.authorization);
+      return { userId: userId || undefined, prisma, redis };
     },
   }));
 
@@ -111,4 +115,7 @@ async function startServer() {
   httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server on port ${PORT}`));
 }
 
-startServer().catch(console.error);
+startServer().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});

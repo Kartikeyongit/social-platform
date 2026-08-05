@@ -28,8 +28,15 @@ export const LoginSchema = z.object({
   password: z.string(),
 });
 
+export const UpdateProfileSchema = z.object({
+  displayName: z.string().max(50).optional(),
+  bio: z.string().max(200).nullable().optional(),
+  avatarUrl: z.string().url().or(z.literal('')).optional(),
+});
+
 export type CreatePostInput = z.infer<typeof CreatePostSchema>;
 export type CreateCommentInput = z.infer<typeof CreateCommentSchema>;
 export type SendMessageInput = z.infer<typeof SendMessageSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
+export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;

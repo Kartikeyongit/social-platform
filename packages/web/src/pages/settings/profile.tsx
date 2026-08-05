@@ -15,7 +15,7 @@ const UPDATE_PROFILE = gql`
 `;
 
 export default function EditProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const router = useRouter();
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
@@ -36,7 +36,7 @@ export default function EditProfilePage() {
     const file = e.target.files?.[0]; if (!file) return;
     setIsUploading(true); const fd = new FormData(); fd.append('image', file);
     try {
-      const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: fd });
+      const res = await fetch(`${API_URL}/upload`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
       if (data.url) { setAvatarUrl(data.url); toast.success('Image uploaded!'); }

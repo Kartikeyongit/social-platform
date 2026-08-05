@@ -287,12 +287,20 @@ The app will be available at:
 ## 🔒 Security
 
 - JWT authentication with 7-day expiry
-- Input validation with Zod schemas
+- Input validation with Zod schemas (server-side, from `@social/shared`)
 - SQL injection prevention via Prisma ORM
 - XSS protection via React
-- CORS configuration for production
-- Environment variable management
-- File type validation for uploads
+- CORS allow-list (configured via `CORS_ORIGIN` — unknown origins are rejected)
+- Rate limiting on `/graphql` and `/upload` endpoints
+- Authenticated image upload with magic-byte file validation
+- Emails are only exposed to the account owner, never in public queries
+- Environment variable management — the server **fails fast** if required
+  variables are missing (no insecure fallback values in source). Copy
+  `packages/api/.env.example` to `.env` and fill in real values.
+
+> ⚠️ If you forked/cloned this project before these changes, **rotate your
+> Cloudinary API key/secret and JWT_SECRET** — the Cloudinary credentials
+> previously shipped as code fallbacks were exposed in the public repository.
 
 ---
 
