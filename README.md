@@ -178,7 +178,7 @@ social-platform/
 │           ├── validation/     # Zod schemas
 │           └── utils/          # Shared helpers
 │
-├── .node-version               # Node.js version for Render
+├── .node-version               # Node.js version for Render & CI
 ├── pnpm-workspace.yaml         # Monorepo config
 └── README.md
 ```
@@ -188,7 +188,7 @@ social-platform/
 ## 🔧 Local Development
 
 ### Prerequisites
-- Node.js 20+
+- Node.js 22+
 - pnpm (`npm install -g pnpm`)
 
 ### Quick Start
