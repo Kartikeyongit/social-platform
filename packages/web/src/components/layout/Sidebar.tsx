@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Icons } from '@/components/icons';
 import { useQuery, gql } from '@apollo/client';
 
@@ -27,6 +28,7 @@ const menuItems = [
 export const Sidebar: React.FC<SidebarProps> = ({ onOpenNotifications }) => {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const { data } = useQuery(GET_UNREAD_COUNT, { pollInterval: 10000 });
   const unreadCount = data?.unreadNotificationCount || 0;
@@ -145,6 +147,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenNotifications }) => {
               </p>
             </div>
           </Link>
+
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center space-x-3 px-4 py-2.5 rounded-2xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-dark-50 transition-all duration-200"
+          >
+            {theme === 'dark' ? <Icons.LightMode className="w-4 h-4" /> : <Icons.DarkMode className="w-4 h-4" />}
+            <span className="text-sm font-medium">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          </button>
 
           <button
             onClick={logout}

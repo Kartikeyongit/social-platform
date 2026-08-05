@@ -34,7 +34,7 @@ export const MobileNav: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   
   const { data } = useQuery(GET_UNREAD_COUNT, { pollInterval: 10000 });
   const unreadCount = data?.unreadNotificationCount || 0;
@@ -59,6 +59,14 @@ export const MobileNav: React.FC = () => {
             Social<span className="text-brand-600">App</span>
           </h1>
         </Link>
+
+        <button
+          onClick={toggleTheme}
+          className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors"
+          aria-label="Toggle dark mode"
+        >
+          {theme === 'dark' ? <Icons.LightMode className="w-5 h-5 text-slate-700 dark:text-slate-300" /> : <Icons.DarkMode className="w-5 h-5 text-slate-700 dark:text-slate-300" />}
+        </button>
 
         <Link href={user ? `/profile/${user.username}` : '/profile'}>
           {user?.avatarUrl ? (
