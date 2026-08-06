@@ -7,6 +7,7 @@ import { PostCard } from '@/components/post/PostCard';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PostSkeleton, ListSkeleton } from '@/components/ui/Skeleton';
+import { CaughtUp } from '@/components/ui/CaughtUp';
 import { UserRow } from '@/components/ui/UserRow';
 import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -185,7 +186,7 @@ export default function ExplorePage() {
   const hashtags = results?.hashtags || [];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="w-full max-w-2xl space-y-5">
       <motion.div variants={fadeUp} initial="hidden" animate="visible">
         <PageHeader title="Explore" subtitle="Search people, hashtags and posts" />
         <div className="relative">
@@ -204,7 +205,7 @@ export default function ExplorePage() {
         <div className="space-y-5">
           {hasHashtagMode && (
             <div className="space-y-1">
-              <h2 className="flex items-center gap-2 pt-1 text-lg font-semibold text-ink">
+              <h2 className="flex items-center gap-2 pt-1 font-display text-lg font-bold text-ink">
                 <Icons.Hash className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                 <span>
                   Posts tagged <span className="text-brand-600 dark:text-brand-400">#{searchTerm}</span>
@@ -228,9 +229,13 @@ export default function ExplorePage() {
                 </div>
               )}
 
-              {tagPosts.map((post: any) => (
-                <PostCard key={post.id} post={post} onDeleted={() => setTagPosts(prev => prev.filter(p => p.id !== post.id))} />
-              ))}
+              {tagPosts.length > 0 && (
+                <div className="[&>*:last-child]:border-b-0">
+                  {tagPosts.map((post: any) => (
+                    <PostCard key={post.id} post={post} onDeleted={() => setTagPosts(prev => prev.filter(p => p.id !== post.id))} />
+                  ))}
+                </div>
+              )}
 
               {!tagLoading && !tagError && tagPosts.length === 0 && (
                 <EmptyState
@@ -242,7 +247,7 @@ export default function ExplorePage() {
 
               <div ref={loaderRef} className="flex flex-col items-center py-8">
                 {isLoadingTagMore && <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />}
-                {!tagHasMore && tagPosts.length > 0 && <p className="text-xs font-medium text-muted">You're all caught up</p>}
+                {!tagHasMore && tagPosts.length > 0 && <CaughtUp className="py-0" />}
               </div>
             </div>
           )}
@@ -263,7 +268,7 @@ export default function ExplorePage() {
 
           {users.length > 0 && (
             <Card className="p-0">
-              <h2 className="flex items-center gap-2 px-4 pb-1 pt-4 text-lg font-semibold text-ink">
+              <h2 className="flex items-center gap-2 px-4 pb-1 pt-4 text-base font-bold text-ink">
                 <Icons.Profile className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                 <span>People</span>
               </h2>
@@ -277,7 +282,7 @@ export default function ExplorePage() {
 
           {hashtags.length > 0 && (
             <Card className="p-5">
-              <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-ink">
+              <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-ink">
                 <Icons.Hash className="h-5 w-5 text-brand-600 dark:text-brand-400" />
                 <span>Hashtags</span>
               </h2>
@@ -296,7 +301,7 @@ export default function ExplorePage() {
         </div>
       ) : (
         <div>
-          <h2 className="flex items-center gap-2 pt-1 text-lg font-semibold text-ink">
+          <h2 className="flex items-center gap-2 pt-1 font-display text-lg font-bold text-ink">
             <Icons.Trending className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             <span>Popular</span>
           </h2>
@@ -315,7 +320,11 @@ export default function ExplorePage() {
             </div>
           )}
 
-          {posts.map((post: any) => <PostCard key={post.id} post={post} onDeleted={() => setPosts(prev => prev.filter(p => p.id !== post.id))} />)}
+          {posts.length > 0 && (
+            <div className="[&>*:last-child]:border-b-0">
+              {posts.map((post: any) => <PostCard key={post.id} post={post} onDeleted={() => setPosts(prev => prev.filter(p => p.id !== post.id))} />)}
+            </div>
+          )}
 
           {!loading && !error && posts.length === 0 && (
             <EmptyState
@@ -327,7 +336,7 @@ export default function ExplorePage() {
 
           <div ref={loaderRef} className="flex flex-col items-center py-8">
             {isLoadingMore && <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />}
-            {!hasMore && posts.length > 0 && <p className="text-xs font-medium text-muted">You're all caught up</p>}
+            {!hasMore && posts.length > 0 && <CaughtUp className="py-0" />}
           </div>
         </div>
       )}

@@ -54,7 +54,7 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="w-full max-w-xl space-y-6">
       <motion.div variants={fadeUp} initial="hidden" animate="visible">
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Edit Profile</h1>
         <p className="mt-1 text-muted">Update your profile information</p>

@@ -247,7 +247,7 @@ export default function MessagesPage() {
   const shouldShowList = !selectedUser;
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-6xl flex-col">
+    <div className="flex h-full w-full max-w-6xl flex-col">
       <PageHeader
         title="Messages"
         subtitle={totalUnread > 0 ? `${totalUnread} unread conversations` : undefined}

@@ -151,7 +151,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, variant = 'list', onCo
       className={cn(
         'relative',
         variant === 'list'
-          ? 'border-b border-line px-1 py-5 [&:last-child]:border-b-0'
+          ? 'border-b border-line px-1 py-5'
           : 'rounded-3xl border border-line bg-surface p-5 shadow-soft',
       )}
     >

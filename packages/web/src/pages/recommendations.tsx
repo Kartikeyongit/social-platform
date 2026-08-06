@@ -47,7 +47,7 @@ export default function RecommendationsPage() {
   const users = data?.suggestedUsers || [];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl space-y-6">
       <PageHeader
         title="Recommendations"
         subtitle="Hand-picked posts and people for you"
@@ -57,7 +57,7 @@ export default function RecommendationsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Recommended Posts */}
         <div className="space-y-3 lg:col-span-2">
-          <h2 className="flex items-center gap-2 text-base font-bold text-ink">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
             <Icons.Trending className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             Recommended posts
           </h2>
@@ -96,7 +96,7 @@ export default function RecommendationsPage() {
 
         {/* Suggested Users */}
         <div className="space-y-3">
-          <h2 className="flex items-center gap-2 text-base font-bold text-ink">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold text-ink">
             <Icons.Profile className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             Suggested users
           </h2>

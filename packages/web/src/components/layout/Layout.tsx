@@ -71,7 +71,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         id="main-content"
         className="flex-1 overflow-y-auto scrollbar-hide pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-16 lg:pb-3 lg:pt-0 lg:ml-72"
       >
-        <div className="p-4 lg:pl-2 lg:pr-6">
+        <div className="p-4 lg:px-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={router.pathname}

@@ -76,7 +76,7 @@ export default function FollowersPage() {
   const currentList = activeTab === 'followers' ? followers : following;
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="w-full max-w-xl space-y-6">
       <PageHeader
         back
         onBack={() => router.back()}

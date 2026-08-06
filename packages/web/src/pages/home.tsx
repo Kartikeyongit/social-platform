@@ -7,6 +7,7 @@ import { CommentSection } from '@/components/post/CommentSection';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PostSkeleton } from '@/components/ui/Skeleton';
+import { CaughtUp } from '@/components/ui/CaughtUp';
 import { Icons } from '@/components/icons';
 
 const GET_FEED = gql`
@@ -138,7 +139,7 @@ export default function HomePage() {
         )}
 
         {allPosts.length > 0 && (
-          <div>
+          <div className="[&>*:last-child]:border-b-0">
             {allPosts.map((post: any) => (
               <PostCard
                 key={post.id}
@@ -158,12 +159,7 @@ export default function HomePage() {
 
         <div ref={loaderRef} className="flex flex-col items-center py-8">
           {isLoadingMore && <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />}
-          {!hasMore && allPosts.length > 0 && (
-            <p className="text-xs font-medium text-muted">
-              You're all caught up
-              <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-brand-500 align-middle" />
-            </p>
-          )}
+          {!hasMore && allPosts.length > 0 && <CaughtUp className="py-0" />}
         </div>
       </div>
       <div className="hidden lg:block w-80 flex-shrink-0">
