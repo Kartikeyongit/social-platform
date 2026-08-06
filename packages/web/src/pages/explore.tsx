@@ -186,7 +186,7 @@ export default function ExplorePage() {
   const hashtags = results?.hashtags || [];
 
   return (
-    <div className="w-full max-w-2xl space-y-5">
+    <div className="mx-auto w-full max-w-2xl space-y-5">
       <motion.div variants={fadeUp} initial="hidden" animate="visible">
         <PageHeader title="Explore" subtitle="Search people, hashtags and posts" />
         <div className="relative">

@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
   if (error && !loading) {
     return (
-      <div className="w-full max-w-2xl">
+      <div className="mx-auto w-full max-w-2xl">
         <ErrorState
           title="Couldn't load this profile"
           message={error.message}
@@ -114,7 +114,7 @@ export default function ProfilePage() {
 
   if (!username || loading || !data) {
     return (
-      <div className="w-full max-w-2xl space-y-6">
+      <div className="mx-auto w-full max-w-2xl space-y-6">
         <ProfileSkeleton />
       </div>
     );
@@ -125,7 +125,7 @@ export default function ProfilePage() {
 
   if (!profileUser) {
     return (
-      <div className="w-full max-w-2xl">
+      <div className="mx-auto w-full max-w-2xl">
         <Card className="p-12 text-center">
           <UserX className="mx-auto mb-4 h-16 w-16 text-muted" />
           <h2 className="mb-2 text-xl font-bold text-ink">User not found</h2>
@@ -138,7 +138,7 @@ export default function ProfilePage() {
   const isOwnProfile = currentUser?.id === profileUser.id;
 
   return (
-    <div className="w-full max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       {/* Profile Header */}
       <motion.div variants={fadeUp} initial="hidden" animate="visible">
         <Card className="p-6 sm:p-8">

@@ -82,7 +82,7 @@ export default function PostDetailPage() {
 
   if (error && !loading) {
     return (
-      <div className="w-full max-w-xl">
+      <div className="mx-auto w-full max-w-xl">
         <ErrorState
           title="Couldn't load this post"
           message={error.message}
@@ -94,7 +94,7 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-xl">
+      <div className="mx-auto w-full max-w-xl">
         <PostSkeleton />
       </div>
     );
@@ -105,7 +105,7 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <div className="w-full max-w-xl space-y-4">
+      <div className="mx-auto w-full max-w-xl space-y-4">
         <PageHeader title="Post" back onBack={() => router.back()} />
         <p className="py-12 text-center text-sm text-muted">Post not found</p>
       </div>
@@ -113,7 +113,7 @@ export default function PostDetailPage() {
   }
 
   return (
-    <div className="w-full max-w-xl space-y-4">
+    <div className="mx-auto w-full max-w-xl space-y-4">
       <PageHeader title="Post" back onBack={() => (window.history.length > 1 ? router.back() : router.push('/home'))} />
 
       <PostCard post={post} variant="card" onDeleted={() => router.push('/home')}>

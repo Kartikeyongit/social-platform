@@ -111,8 +111,8 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex gap-6">
-      <div className="flex-1 max-w-2xl space-y-2">
+    <div className="relative">
+      <div className="mx-auto w-full max-w-2xl space-y-2">
         <CreatePost onPosted={handlePosted} />
 
         {loading && allPosts.length === 0 && (
@@ -162,7 +162,7 @@ export default function HomePage() {
           {!hasMore && allPosts.length > 0 && <CaughtUp className="py-0" />}
         </div>
       </div>
-      <div className="hidden lg:block w-80 flex-shrink-0">
+      <div className="absolute right-0 top-0 hidden w-80 min-[1400px]:block">
         <div className="sticky top-0 space-y-4"><TrendingSidebar /></div>
       </div>
     </div>

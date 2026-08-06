@@ -89,7 +89,7 @@ export default function NotificationsPage() {
   const groups = groupNotificationsByDay(notifications);
 
   return (
-    <div className="w-full max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       <PageHeader
         title="Notifications"
         subtitle={unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up'}

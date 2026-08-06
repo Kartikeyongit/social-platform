@@ -47,7 +47,7 @@ export default function RecommendationsPage() {
   const users = data?.suggestedUsers || [];
 
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <PageHeader
         title="Recommendations"
         subtitle="Hand-picked posts and people for you"

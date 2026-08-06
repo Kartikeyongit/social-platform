@@ -38,7 +38,7 @@ export default function TrendingPage() {
   const users = data?.suggestedUsers || [];
 
   return (
-    <div className="w-full max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       <PageHeader
         title="Trending"
         subtitle="What's popular right now"
