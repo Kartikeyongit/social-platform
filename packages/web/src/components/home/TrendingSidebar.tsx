@@ -3,6 +3,7 @@ import { useQuery, useMutation, gql } from '@apollo/client';
 import { useRouter } from 'next/router';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
+import { UserRow } from '@/components/ui/UserRow';
 
 const HOME_TRENDING = gql`
   query HomeTrending {
@@ -62,98 +63,82 @@ export const TrendingSidebar: React.FC = () => {
   };
 
   return (
-    <div className="h-full">
-      <div className="h-full bg-white dark:bg-dark-0 border border-slate-200/60 dark:border-dark-100 rounded-3xl flex flex-col overflow-hidden shadow-soft p-4 space-y-4">
-        {/* Search */}
-        <form onSubmit={submitSearch} className="relative flex-shrink-0">
-          <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="Search"
-            className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-dark-50 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white placeholder:text-slate-400"
-          />
-        </form>
+    <div className="flex h-full flex-col gap-5 overflow-hidden rounded-row border border-line bg-surface p-4 shadow-card">
+      <form onSubmit={submitSearch} className="relative flex-shrink-0">
+        <Icons.Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <input
+          type="text"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search"
+          className="input-premium w-full pl-10"
+        />
+      </form>
 
-        {/* Trending Hashtags */}
-        <div className="flex-shrink-0">
-          <h3 className="font-bold text-slate-900 dark:text-white mb-3 mt-1 text-sm">Trending</h3>
-          <div className="space-y-0">
-            {hashtags.length === 0 && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">No trending topics</p>
-            )}
-            {hashtags.map((tag: any, index: number) => (
-              <Link
-                key={tag.name}
-                href={`/explore?q=${encodeURIComponent(`#${tag.name}`)}`}
-                className="block hover:bg-slate-50 dark:hover:bg-dark-50 rounded-lg p-2 -mx-1 transition-colors"
+      <div className="flex-shrink-0">
+        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
+          <Icons.Trending className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+          Trending
+        </h3>
+        <div className="-mx-2 space-y-0.5">
+          {hashtags.length === 0 && <p className="px-2 text-xs text-muted">No trending topics</p>}
+          {hashtags.map((tag: any, index: number) => (
+            <Link
+              key={tag.name}
+              href={`/explore?q=${encodeURIComponent(`#${tag.name}`)}`}
+              className="group flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-surface-2"
+            >
+              <span
+                className={`w-5 flex-shrink-0 text-center text-sm font-bold tabular-nums ${
+                  index < 3 ? 'text-brand-600 dark:text-brand-400' : 'text-muted'
+                }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] text-slate-400">{index + 1} · Trending</p>
-                    <p className="font-semibold text-sm text-slate-900 dark:text-white">#{tag.name}</p>
-                    <p className="text-[10px] text-slate-400">{tag.postCount} posts</p>
-                  </div>
-                  <Icons.More className="w-4 h-4 text-slate-400" />
-                </div>
-              </Link>
-            ))}
-          </div>
+                {index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-ink group-hover:underline">
+                  #{tag.name}
+                </p>
+                <p className="text-xs text-muted">{tag.postCount} posts</p>
+              </div>
+              <Icons.More className="h-4 w-4 flex-shrink-0 text-muted" />
+            </Link>
+          ))}
         </div>
+      </div>
 
-        {/* Who to follow - Scrollable after 3 visible */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <h3 className="font-bold text-slate-900 dark:text-white mb-3 text-sm flex-shrink-0">Who to follow</h3>
-          <div className="overflow-y-auto scrollbar-hide flex-1" style={{ maxHeight: 'calc(3 * 58px)' }}>
-            <div className="space-y-0">
-              {users.length === 0 && (
-                <p className="text-xs text-slate-400 dark:text-slate-500">No suggestions</p>
-              )}
-              {users.map((user: any) => (
-                <div key={user.id} className="flex items-center justify-between" style={{ minHeight: '44px' }}>
-                  <Link href={`/profile/${user.username}`} className="flex items-center space-x-2 flex-1 min-w-0">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                        {user.displayName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm text-slate-900 dark:text-white truncate">{user.displayName}</p>
-                      <p className="text-[10px] text-slate-400 truncate">@{user.username}</p>
-                    </div>
-                  </Link>
-                  <button
-                    onClick={() => user.isFollowing
-                      ? unfollowUser({ variables: { userId: user.id } })
-                      : followUser({ variables: { userId: user.id } })}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors flex-shrink-0 ml-2 ${
-                      user.isFollowing
-                        ? 'bg-slate-100 dark:bg-dark-100 text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500'
-                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
-                    }`}
-                  >
-                    {user.isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <h3 className="mb-2 flex flex-shrink-0 items-center gap-1.5 text-sm font-bold text-ink">
+          <Icons.ForYou className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+          Who to follow
+        </h3>
+        <div className="-mx-2 max-h-[258px] flex-1 space-y-0.5 overflow-y-auto scrollbar-hide">
+          {users.length === 0 && <p className="px-2 text-xs text-muted">No suggestions</p>}
+          {users.map((user: any) => (
+            <UserRow
+              key={user.id}
+              user={{
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarUrl: user.avatarUrl,
+                bio: user.bio,
+                isFollowing: user.isFollowing,
+              }}
+              size="sm"
+              showFollow
+            />
+          ))}
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="pt-2 border-t border-slate-200/40 dark:border-dark-100/40 flex-shrink-0">
-          <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-slate-400">
-            <span>Terms</span>
-            <span>Privacy</span>
-            <span>Cookies</span>
-            <span>About</span>
-            <span>© 2024 SocialApp</span>
-          </div>
-        </div>
+      <div className="flex flex-shrink-0 flex-wrap gap-x-2 gap-y-1 border-t border-line pt-3 text-[10px] text-muted">
+        <span>Terms</span>
+        <span>Privacy</span>
+        <span>Cookies</span>
+        <span>About</span>
+        <span>© 2024 SocialApp</span>
       </div>
     </div>
   );
-}
+};

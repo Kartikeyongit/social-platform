@@ -1,14 +1,19 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useLazyQuery, useSubscription, gql } from '@apollo/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatDistanceToNow } from 'date-fns';
-import { motion } from 'framer-motion';
+import { format, isSameDay, isYesterday, formatDistanceToNow } from 'date-fns';
 import { Icons } from '@/components/icons';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { cn } from '@/utils/cn';
+import { Avatar } from '@/components/ui/Avatar';
+import { Button, IconButton } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ChatBubble, DayDivider } from '@/components/ui/ChatBubble';
+import { ListSkeleton } from '@/components/ui/Skeleton';
 
 const GET_CONVERSATIONS = gql`
   query GetConversations($limit: Int) {
@@ -225,203 +230,297 @@ export default function MessagesPage() {
   const conversations = convData?.conversations || [];
   const messages = messagesData?.messages?.edges?.map((e: any) => e.node) || [];
 
-  return (
-    <div className="">
-      <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft flex flex-col md:flex-row md:h-[644px] h-auto overflow-hidden">
-        {/* Conversations List */}
-        <div className="w-full md:w-80 md:border-r border-b md:border-b-0 border-slate-200 dark:border-dark-100 flex flex-col flex-shrink-0">
-          <div className="p-4 border-b border-slate-200 dark:border-dark-100 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Conversations</p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setNewChatOpen(o => !o)}
-                aria-label="New message"
-                className="flex items-center space-x-1.5 rounded-full px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition-colors shadow-md"
-              >
-                <Icons.Send className="w-3.5 h-3.5" />
-                <span>New</span>
-              </motion.button>
-            </div>
+  const groupedMessages = useMemo(() => {
+    const groups: { label: string; items: any[] }[] = [];
+    for (const m of messages) {
+      const d = new Date(m.createdAt);
+      const label = isSameDay(d, new Date()) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'MMMM d, yyyy');
+      const last = groups[groups.length - 1];
+      if (last && last.label === label) last.items.push(m);
+      else groups.push({ label, items: [m] });
+    }
+    return groups;
+  }, [messages]);
 
-            {newChatOpen && (
-              <div className="mt-3">
-                <div className="relative">
-                  <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search people..."
-                    className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-dark-50 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white placeholder:text-slate-400"
-                  />
-                </div>
-                <div className="mt-2 max-h-56 overflow-y-auto scrollbar-hide">
-                  {searchError && (
-                    <p className="text-xs text-red-500 px-2 py-1">{searchError.message}</p>
-                  )}
-                  {searchLoading && searchQuery.trim() && (
-                    <div className="p-2 space-y-1">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="flex items-center space-x-3 p-2 animate-pulse">
-                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-dark-100" />
-                          <div className="flex-1 space-y-1.5">
-                            <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24" />
-                            <div className="h-2.5 bg-slate-200 dark:bg-dark-100 rounded-full w-16" />
+  const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+
+  const shouldShowList = !selectedUser;
+
+  return (
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col">
+      <PageHeader
+        title="Messages"
+        subtitle={totalUnread > 0 ? `${totalUnread} unread conversations` : undefined}
+        actions={
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setNewChatOpen((o) => !o)}
+            className="gap-1.5"
+          >
+            <Icons.Send className="h-4 w-4" />
+            New
+          </Button>
+        }
+      />
+
+      <div className="h-[calc(100dvh-12.5rem)] min-h-[26rem] overflow-hidden rounded-row border border-line bg-surface shadow-card sm:h-[min(680px,74vh)]">
+        <div className="flex h-full">
+          {/* Conversations List */}
+          <aside
+            className={cn(
+              'w-full flex-col border-line sm:flex sm:w-80 sm:flex-shrink-0 sm:border-r lg:w-96',
+              shouldShowList ? 'flex' : 'hidden',
+            )}
+          >
+            <div className="flex-shrink-0 border-b border-line p-3">
+              {newChatOpen && (
+                <div className="mb-3">
+                  <div className="relative">
+                    <Icons.Search className="absolute left-3 top-1/2 w-4 -translate-y-1/2 text-muted" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search people..."
+                      className="input-premium w-full pl-9"
+                    />
+                  </div>
+                  <div className="mt-2 max-h-72 overflow-y-auto scrollbar-hide">
+                    {searchError && (
+                      <p className="px-2 py-1 text-xs text-red-500">{searchError.message}</p>
+                    )}
+                    {searchLoading && searchQuery.trim() && (
+                      <div className="p-2">{<ListSkeleton rows={3} />}</div>
+                    )}
+                    {!searchLoading && !searchQuery.trim() && (
+                      <p className="px-2 py-1 text-xs text-muted">Type a name or username to find people</p>
+                    )}
+                    {!searchLoading && searchQuery.trim() && searchResults.length === 0 && (
+                      <p className="px-2 py-1 text-xs text-muted">No people found</p>
+                    )}
+                    {searchResults
+                      .filter((u: any) => u.id !== user?.id)
+                      .map((u: any) => (
+                        <div
+                          key={u.id}
+                          onClick={() => selectSearchUser(u)}
+                          className="flex cursor-pointer items-center gap-3 rounded-2xl px-2.5 py-2.5 transition-colors hover:bg-surface-2"
+                        >
+                          <Avatar
+                            name={u.displayName}
+                            username={u.username}
+                            src={u.avatarUrl}
+                            size="sm"
+                            className="flex-shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-ink">{u.displayName}</p>
+                            <p className="truncate text-xs text-muted">@{u.username}</p>
                           </div>
+                          <span className="flex-shrink-0 rounded-full bg-ink px-3 py-1 text-xs font-semibold text-surface transition-colors hover:bg-ink/80">
+                            Message
+                          </span>
                         </div>
                       ))}
-                    </div>
-                  )}
-                  {!searchLoading && !searchQuery.trim() && (
-                    <p className="text-xs text-slate-400 px-2 py-1">Type a name or username to find people</p>
-                  )}
-                  {!searchLoading && searchQuery.trim() && searchResults.length === 0 && (
-                    <p className="text-xs text-slate-400 px-2 py-1">No people found</p>
-                  )}
-                  {searchResults
-                    .filter((u: any) => u.id !== user?.id)
-                    .map((u: any) => (
-                      <div key={u.id} onClick={() => selectSearchUser(u)}
-                        className="flex items-center space-x-3 p-2 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors">
-                        {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" /> :
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">{u.displayName.charAt(0).toUpperCase()}</div>}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-slate-900 dark:text-white truncate">{u.displayName}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{u.username}</p>
-                        </div>
-                        <span className="flex-shrink-0 rounded-full px-3 py-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold">Message</span>
-                      </div>
-                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          <div className="overflow-y-auto flex-1 scrollbar-hide max-h-64 md:max-h-none">
-            {convLoading ? (
-              <div className="p-2 space-y-1">{[...Array(4)].map((_,i)=><div key={i} className="p-3 animate-pulse"><div className="flex items-center space-x-3"><div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"/><div className="space-y-2 flex-1"><div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-24"/><div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-16"/></div></div></div>)}</div>
-            ) : convError ? (
-              <div className="p-4">
-                <ErrorState
-                  title="Couldn't load conversations"
-                  message={convError.message}
-                  onRetry={() => refetchConversations()}
-                />
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className="p-4">
-                <EmptyState
-                  icon={<Icons.Messages className="w-8 h-8" />}
-                  title="No conversations yet"
-                  description="Send a message to someone you follow to start chatting."
-                  action={{ label: 'Find people', href: '/explore' }}
-                />
-              </div>
-            ) : (
-              <div className="space-y-0.5 p-2">
-                {conversations.map((conv: any) => {
-                  const isActive = selectedUser?.id === conv.user.id;
-                  const last = conv.lastMessage;
-                  const preview = last?.content?.length > 40 ? `${last.content.slice(0, 40)}…` : (last?.content || '');
-                  const isMine = last?.sender?.id === user?.id;
-                  return (
-                    <div key={conv.user.id} onClick={() => openConversation(conv)}
-                      className={`p-3 rounded-2xl cursor-pointer transition-colors ${isActive ? 'bg-brand-50 dark:bg-brand-900/20' : 'hover:bg-slate-50 dark:hover:bg-dark-50'}`}>
-                      <div className="flex items-center space-x-3">
-                        {conv.user.avatarUrl ? <img src={conv.user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0"/> :
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-semibold shadow-md flex-shrink-0">{conv.user.displayName.charAt(0).toUpperCase()}</div>}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium text-sm text-slate-900 dark:text-white truncate">{conv.user.displayName}</p>
+              )}
+
+              <button
+                onClick={() => setNewChatOpen((o) => !o)}
+                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-surface-2"
+              >
+                <span>Conversations</span>
+                <Icons.More className="h-4 w-4 text-muted" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto scrollbar-hide">
+              {convLoading ? (
+                <div className="m-3">
+                  <ListSkeleton rows={6} />
+                </div>
+              ) : convError ? (
+                <div className="p-3">
+                  <ErrorState
+                    title="Couldn't load conversations"
+                    message={convError.message}
+                    onRetry={() => refetchConversations()}
+                  />
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="p-3">
+                  <EmptyState
+                    icon={<Icons.Messages className="h-8 w-8" />}
+                    title="No conversations yet"
+                    description="Send a message to someone you follow to start chatting."
+                    action={{ label: 'Find people', href: '/explore' }}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-0.5 p-2">
+                  {conversations.map((conv: any) => {
+                    const isActive = selectedUser?.id === conv.user.id;
+                    const last = conv.lastMessage;
+                    const preview = last?.content?.length > 40 ? `${last.content.slice(0, 40)}…` : (last?.content || '');
+                    const isMine = last?.sender?.id === user?.id;
+                    return (
+                      <button
+                        key={conv.user.id}
+                        onClick={() => openConversation(conv)}
+                        className={cn(
+                          'flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors duration-200',
+                          isActive ? 'bg-surface-2' : 'hover:bg-surface-2/60',
+                        )}
+                      >
+                        <Avatar
+                          name={conv.user.displayName}
+                          username={conv.user.username}
+                          src={conv.user.avatarUrl}
+                          size="md"
+                          className="flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate text-sm font-semibold text-ink">{conv.user.displayName}</span>
                             {last && (
-                              <span className="text-[10px] text-slate-400 flex-shrink-0 ml-2">
+                              <span className="flex-shrink-0 text-[11px] text-muted">
                                 {formatDistanceToNow(new Date(last.createdAt), { addSuffix: true })}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                          <div className="mt-0.5 flex items-center justify-between gap-2">
+                            <span className="truncate text-xs text-muted">
                               {isMine && <span className="text-brand-500">You: </span>}
                               {preview}
-                            </p>
+                            </span>
                             {conv.unreadCount > 0 && (
-                              <span className="ml-2 flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                              <span className="flex h-[18px] min-w-[18px] flex-shrink-0 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
                                 {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                               </span>
                             )}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </aside>
 
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-[400px] md:min-h-0">
-          {selectedUser ? (
-            <>
-              <div className="p-4 border-b border-slate-200 dark:border-dark-100 flex-shrink-0">
-                <Link href={`/profile/${selectedUser.username}`} className="flex items-center space-x-3">
-                  {selectedUser.avatarUrl ? <img src={selectedUser.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover"/> :
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-semibold shadow-md">{selectedUser.displayName.charAt(0).toUpperCase()}</div>}
-                  <div><p className="font-semibold text-slate-900 dark:text-white">{selectedUser.displayName}</p><p className="text-sm text-slate-500 dark:text-slate-400">@{selectedUser.username}</p></div>
-                </Link>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
-                {messagesLoading ? (
-                  <div className="flex items-center justify-center h-full"><div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin"/></div>
-                ) : messagesError ? (
-                  <div className="flex items-center justify-center h-full">
-                    <ErrorState
-                      title="Couldn't load messages"
-                      message={messagesError.message}
-                      onRetry={() => refetch()}
+          {/* Chat Area */}
+          <section
+            className={cn(
+              'min-w-0 flex-1 flex-col',
+              selectedUser ? 'flex' : 'hidden sm:flex',
+            )}
+          >
+            {selectedUser ? (
+              <>
+                <div className="flex flex-shrink-0 items-center gap-3 border-b border-line p-3">
+                  <IconButton
+                    label="Back to conversations"
+                    size="sm"
+                    className="sm:hidden"
+                    onClick={() => setSelectedUser(null)}
+                  >
+                    <Icons.Back className="h-5 w-5" />
+                  </IconButton>
+                  <Link href={`/profile/${selectedUser.username}`} className="flex min-w-0 items-center gap-3 rounded-full">
+                    <Avatar
+                      name={selectedUser.displayName}
+                      username={selectedUser.username}
+                      src={selectedUser.avatarUrl}
+                      size="sm"
+                      className="flex-shrink-0"
                     />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <EmptyState
-                    icon={<Icons.Messages className="w-8 h-8" />}
-                    title="No messages yet"
-                    description="Say hello!"
-                  />
-                ) : (
-                  messages.map((msg: any) => {
-                    const isMine = msg.sender.id === user?.id;
-                    return (
-                      <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${isMine ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-dark-100 text-slate-900 dark:text-white'}`}>
-                          <p className="text-sm">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${isMine ? 'text-blue-200' : 'text-slate-400'}`}>{formatDistanceToNow(new Date(msg.createdAt),{addSuffix:true})}</p>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-ink">{selectedUser.displayName}</p>
+                      <p className="truncate text-xs text-muted">@{selectedUser.username}</p>
+                    </div>
+                  </Link>
+                </div>
+
+                <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-4 sm:px-6">
+                  {messagesLoading ? (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                    </div>
+                  ) : messagesError ? (
+                    <div className="flex h-full items-center justify-center">
+                      <ErrorState
+                        title="Couldn't load messages"
+                        message={messagesError.message}
+                        onRetry={() => refetch()}
+                      />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <EmptyState
+                      icon={<Icons.Messages className="h-8 w-8" />}
+                      title="No messages yet"
+                      description="Say hello!"
+                    />
+                  ) : (
+                    groupedMessages.map((group) => (
+                      <div key={group.label}>
+                        <DayDivider label={group.label} />
+                        <div className="space-y-3">
+                          {group.items.map((msg: any, i: number) => {
+                            const isMine = msg.sender.id === user?.id;
+                            const showAvatar =
+                              !isMine &&
+                              (i === 0 || group.items[i - 1].sender.id !== msg.sender.id);
+                            return (
+                              <ChatBubble
+                                key={msg.id}
+                                message={msg}
+                                isMine={isMine}
+                                showAvatar={showAvatar}
+                              />
+                            );
+                          })}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef}/>
-              </div>
-              <form onSubmit={handleSend} className="p-4 border-t border-slate-200 dark:border-dark-100 flex-shrink-0">
-                <div className="flex space-x-2">
-                  <input type="text" value={messageInput} onChange={e=>setMessageInput(e.target.value)} placeholder="Type a message..." className="input-premium flex-1"/>
-                  <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.95}} type="submit" disabled={!messageInput.trim()||sendingMessage} aria-label="Send message" className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-2xl font-medium transition-all disabled:opacity-50">
-                    {sendingMessage ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"/> : <Icons.Send className="w-5 h-5"/>}
-                  </motion.button>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
-              </form>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center p-6">
-              <EmptyState
-                icon={<Icons.Messages className="w-8 h-8" />}
-                title="Select a conversation"
-                description="Pick a chat from the list to start messaging"
-              />
-            </div>
-          )}
+
+                <form onSubmit={handleSend} className="flex flex-shrink-0 items-center gap-2 border-t border-line p-3">
+                  <input
+                    type="text"
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    placeholder="Type a message..."
+                    className="input-premium flex-1"
+                  />
+                  <Button
+                    type="submit"
+                    size="md"
+                    disabled={!messageInput.trim() || sendingMessage}
+                    className="px-3.5"
+                    aria-label="Send message"
+                  >
+                    {sendingMessage ? (
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    ) : (
+                      <Icons.Send className="h-5 w-5" />
+                    )}
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <div className="flex flex-1 items-center justify-center p-6">
+                <EmptyState
+                  icon={<Icons.Messages className="h-8 w-8" />}
+                  title="Select a conversation"
+                  description="Pick a chat from the list to start messaging"
+                />
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </div>

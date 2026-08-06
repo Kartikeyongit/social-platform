@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
-import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '@/components/icons';
-import { getNotificationHref, getNotificationIcon } from '@/utils/notifications';
+import { groupNotificationsByDay } from '@/utils/notifications';
 import { EmptyState } from '@/components/ui/EmptyState';
-import Link from 'next/link';
+import { NotificationRow } from '@/components/ui/NotificationRow';
+import { IconButton } from '@/components/ui/Button';
+import { ListSkeleton } from '@/components/ui/Skeleton';
+import { spring } from '@/utils/motion';
 
 const GET_NOTIFICATIONS = gql`
   query GetNotifications($limit: Int) {
@@ -49,6 +51,20 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
 
   const notifications = data?.notifications || [];
   const unreadCount = data?.unreadNotificationCount || 0;
+  const groups = groupNotificationsByDay(notifications);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
 
   return (
     <AnimatePresence>
@@ -59,7 +75,7 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black/20 z-40"
+            className="fixed inset-0 z-40 bg-black/30"
             onClick={onClose}
           />
           <motion.div
@@ -69,95 +85,53 @@ export const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ isOpen, 
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-dark-0 z-50 shadow-2xl border-l border-slate-200/60 dark:border-dark-100 flex flex-col"
+            transition={spring}
+            className="fixed right-0 top-0 bottom-0 z-50 flex w-full max-w-md flex-col border-l border-line bg-surface shadow-float pb-[env(safe-area-inset-bottom)]"
           >
-            <div className="flex items-center justify-between p-4 border-b border-slate-200/60 dark:border-dark-100 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-line p-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white font-display">Notifications</h2>
-                {unreadCount > 0 && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{unreadCount} unread</p>
-                )}
+                <h2 className="font-display text-lg font-bold text-ink">Notifications</h2>
+                <p className="text-xs text-muted">
+                  {unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up'}
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
                   <button
                     onClick={() => markAllRead()}
                     disabled={markingRead}
-                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium disabled:opacity-50"
+                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-50 disabled:opacity-50 dark:text-brand-400 dark:hover:bg-brand-900/20"
                   >
                     {markingRead ? 'Marking...' : 'Mark all read'}
                   </button>
                 )}
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 dark:hover:bg-dark-50 transition-colors"
-                  aria-label="Close notifications"
-                >
-                  <Icons.Back className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                </button>
+                <IconButton label="Close notifications" onClick={onClose} size="sm">
+                  <Icons.Back className="h-5 w-5" />
+                </IconButton>
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
               {loading ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-4 animate-pulse">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"></div>
-                        <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-48"></div>
-                          <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24"></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ListSkeleton rows={5} />
               ) : notifications.length === 0 ? (
                 <EmptyState
-                  icon={<Icons.Notifications className="w-8 h-8" />}
+                  icon={<Icons.Notifications className="h-8 w-8" />}
                   title="No notifications yet"
                   description="You're all caught up!"
                 />
               ) : (
-                <div className="space-y-2">
-                  {notifications.map((notification: any) => {
-                    const href = getNotificationHref(notification);
-                    const inner = (
-                      <div className="flex items-center space-x-3">
-                        {getNotificationIcon(notification.type)}
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm ${!notification.read ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                            <span className="font-medium">{notification.actor.displayName}</span>
-                            {' '}
-                            {notification.type === 'LIKE' && 'liked your post'}
-                            {notification.type === 'COMMENT' && 'commented on your post'}
-                            {notification.type === 'FOLLOW' && 'started following you'}
-                            {notification.type === 'MESSAGE' && 'sent you a message'}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                          </p>
-                        </div>
-                        {!notification.read && (
-                          <div className="w-2 h-2 bg-brand-500 rounded-full flex-shrink-0"></div>
-                        )}
-                      </div>
-                    );
-                    const base = `block bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-3.5 hover:shadow-md transition-all ${
-                      !notification.read ? 'border-l-4 border-brand-500 bg-brand-50/30 dark:bg-brand-900/10' : ''
-                    }`;
-                    return href ? (
-                      <Link key={notification.id} href={href} onClick={onClose} className={base}>
-                        {inner}
-                      </Link>
-                    ) : (
-                      <div key={notification.id} className={base}>
-                        {inner}
-                      </div>
-                    );
-                  })}
+                <div className="space-y-6">
+                  {groups.map((group) => (
+                    <div key={group.label} className="space-y-2">
+                      <p className="px-1 text-xs font-semibold uppercase tracking-widest text-muted">
+                        {group.label}
+                      </p>
+                      {group.items.map((n) => (
+                        <NotificationRow key={n.id} notification={n} onClick={onClose} />
+                      ))}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

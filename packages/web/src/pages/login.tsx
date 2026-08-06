@@ -3,6 +3,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Icons } from '@/components/icons';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -35,42 +38,83 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 via-brand-700 to-blue-800 items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIyIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
-        <div className="relative z-10 text-center px-12">
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.5 }} className="w-24 h-24 bg-white/20 backdrop-blur rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-            <span className="text-5xl font-bold text-white">S</span>
+    <div className="flex min-h-screen bg-app-bg">
+      <div className="relative hidden w-1/2 items-center justify-center overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-violet-800 lg:flex">
+        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,white_2px,transparent_2px)] [background-size:48px_48px]" />
+        <div className="relative z-10 px-12 text-center">
+          <motion.div
+            initial={{ scale: 0, rotate: -12 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-white/15 shadow-2xl backdrop-blur-md"
+          >
+            <Icons.ForYou className="h-12 w-12 text-white" />
           </motion.div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-5xl font-bold text-white mb-4 font-display">Welcome to SocialApp</motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xl text-white/80">Connect, share, and discover amazing content</motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 font-display text-5xl font-bold tracking-tight text-white"
+          >
+            Welcome to SocialApp
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-xl text-white/80"
+          >
+            Connect, share, and discover amazing content
+          </motion.p>
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50 dark:bg-dark-0">
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md">
-          <div className="lg:hidden mb-8 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow"><span className="text-3xl font-bold text-white">S</span></div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">Social<span className="text-brand-600">App</span></h1>
+
+      <div className="flex flex-1 items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="w-full max-w-md"
+        >
+          <div className="mb-8 text-center lg:hidden">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 shadow-glow">
+              <Icons.ForYou className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+              Social<span className="text-brand-600">App</span>
+            </h1>
           </div>
-          <div className="bg-white dark:bg-dark-50 rounded-3xl shadow-soft p-8">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-display">Sign in</h2>
-            <p className="text-slate-500 dark:text-slate-400 mb-8">Enter your credentials to continue</p>
+
+          <Card className="p-8">
+            <h2 className="mb-2 font-display text-2xl font-bold tracking-tight text-ink">Sign in</h2>
+            <p className="mb-8 text-muted">Enter your credentials to continue</p>
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div><label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email</label><input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input-premium" placeholder="john@example.com" /></div>
-              <div><label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Password</label><input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="input-premium" placeholder="••••••••" /></div>
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={loading} className="btn-primary-premium w-full py-3 text-base">
-                {loading ? <span className="flex items-center space-x-2"><span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Signing in...</span></span> : 'Sign in'}
-              </motion.button>
+              <div>
+                <label htmlFor="email" className="mb-2 block text-sm font-medium text-ink">Email</label>
+                <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input-premium" placeholder="john@example.com" />
+              </div>
+              <div>
+                <label htmlFor="password" className="mb-2 block text-sm font-medium text-ink">Password</label>
+                <input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="input-premium" placeholder="••••••••" />
+              </div>
+              <Button type="submit" loading={loading} size="lg" className="w-full">
+                {loading ? 'Signing in...' : 'Sign in'}
+              </Button>
             </form>
-            <p className="text-center mt-6 text-slate-500 dark:text-slate-400">Don't have an account? <Link href="/register" className="text-brand-600 hover:text-brand-700 font-medium">Sign up</Link></p>
-          </div>
-          <div className="mt-6 p-4 bg-brand-50 dark:bg-brand-900/20 rounded-2xl border border-brand-200/50 dark:border-brand-800/50">
-            <p className="text-xs font-semibold text-brand-700 dark:text-brand-400 mb-2">Demo Credentials</p>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">Email: john@example.com / Password: password123</p>
+            <p className="mt-6 text-center text-muted">
+              Don't have an account?{' '}
+              <Link href="/register" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                Sign up
+              </Link>
+            </p>
+          </Card>
+
+          <div className="mt-6 rounded-2xl border border-brand-500/25 bg-brand-50 p-4 dark:bg-brand-900/15">
+            <p className="mb-2 text-xs font-semibold text-brand-700 dark:text-brand-400">Demo Credentials</p>
+            <p className="mb-2 text-xs text-ink/70">Email: john@example.com / Password: password123</p>
             <button
               type="button"
               onClick={() => { setEmail('john@example.com'); setPassword('password123'); }}
-              className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
+              className="text-xs font-medium text-brand-600 underline-offset-2 hover:underline dark:text-brand-400"
             >
               Fill credentials
             </button>

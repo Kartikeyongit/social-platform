@@ -7,11 +7,15 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import Link from 'next/link';
-import { UserX, Settings } from 'lucide-react';
+import { UserX } from 'lucide-react';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { PostCard } from '@/components/post/PostCard';
+import { Avatar } from '@/components/ui/Avatar';
+import { Card } from '@/components/ui/Card';
+import { buttonClass } from '@/components/ui/Button';
+import { fadeUp } from '@/utils/motion';
 
 const GET_USER = gql`
   query GetUser($username: String!) {
@@ -98,7 +102,7 @@ export default function ProfilePage() {
 
   if (error && !loading) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl">
         <ErrorState
           title="Couldn't load this profile"
           message={error.message}
@@ -110,7 +114,7 @@ export default function ProfilePage() {
 
   if (!username || loading || !data) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6">
         <ProfileSkeleton />
       </div>
     );
@@ -121,12 +125,12 @@ export default function ProfilePage() {
 
   if (!profileUser) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-12 text-center">
-          <UserX className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">User not found</h2>
-          <p className="text-slate-500 dark:text-slate-400">The user @{username} doesn't exist</p>
-        </div>
+      <div className="mx-auto max-w-2xl">
+        <Card className="p-12 text-center">
+          <UserX className="mx-auto mb-4 h-16 w-16 text-muted" />
+          <h2 className="mb-2 text-xl font-bold text-ink">User not found</h2>
+          <p className="text-muted">The user @{username} doesn't exist</p>
+        </Card>
       </div>
     );
   }
@@ -134,135 +138,124 @@ export default function ProfilePage() {
   const isOwnProfile = currentUser?.id === profileUser.id;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       {/* Profile Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-8"
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-5">
-            {profileUser.avatarUrl ? (
-              <img src={profileUser.avatarUrl} alt="" className="w-24 h-24 rounded-full object-cover shadow-md" />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white text-4xl font-bold shadow-glow flex-shrink-0">
-                {profileUser.displayName.charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-display">
-                {profileUser.displayName}
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400">@{profileUser.username}</p>
-              {profileUser.bio && (
-                <p className="text-slate-700 dark:text-slate-300 mt-2">{profileUser.bio}</p>
-              )}
-              
-              {/* Stats - Clickable */}
-              <div className="flex space-x-5 mt-4">
-                <div className="text-center">
-                  <p className="font-bold text-slate-900 dark:text-white">{profileUser.postCount}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Posts</p>
-                </div>
-                
-                <Link
-                  href={`/profile/${profileUser.username}/followers`}
-                  className="text-center hover:opacity-80 transition-opacity cursor-pointer no-underline"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white hover:text-brand-600 transition-colors">
-                    {profileUser.followerCount}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Followers</p>
-                </Link>
-                
-                <Link
-                  href={`/profile/${profileUser.username}/followers?tab=following`}
-                  className="text-center hover:opacity-80 transition-opacity cursor-pointer no-underline"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <p className="font-bold text-slate-900 dark:text-white hover:text-brand-600 transition-colors">
-                    {profileUser.followingCount}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Following</p>
-                </Link>
-              </div>
-              
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
-                <Icons.CreatePost className="w-3 h-3 inline mr-1" />
-                Joined {formatDistanceToNow(new Date(profileUser.createdAt), { addSuffix: true })}
-              </p>
-            </div>
-          </div>
-          
-          {/* Action Button */}
-          <div className="flex-shrink-0">
-            {isOwnProfile ? (
-              <Link
-                href="/settings/profile"
-                className="inline-flex items-center space-x-2 px-5 py-2.5 bg-white dark:bg-dark-50 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-full font-medium text-sm hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-dark-100 transition-all shadow-sm"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Edit Profile</span>
-              </Link>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <motion.button
-                  layout
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleFollow}
-                  disabled={followLoading}
-                  className={profileUser.isFollowing ? 'btn-secondary-premium' : 'btn-primary-premium'}
-                >
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={followLoading ? 'loading' : (profileUser.isFollowing ? 'unfollow' : 'follow')}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ duration: 0.15 }}
-                      className="flex items-center space-x-2"
-                    >
-                      {followLoading ? (
-                        <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /><span>Processing</span></>
-                      ) : profileUser.isFollowing ? 'Unfollow' : 'Follow'}
-                    </motion.span>
-                  </AnimatePresence>
-                </motion.button>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+      <motion.div variants={fadeUp} initial="hidden" animate="visible">
+        <Card className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 flex-col items-start gap-5 sm:flex-row sm:items-center">
+              <Avatar
+                name={profileUser.displayName}
+                username={profileUser.username}
+                src={profileUser.avatarUrl}
+                size="xl"
+                className="shadow-card"
+              />
+              <div className="min-w-0">
+                <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
+                  {profileUser.displayName}
+                </h1>
+                <p className="text-muted">@{profileUser.username}</p>
+                {profileUser.bio && (
+                  <p className="mt-2 text-sm leading-relaxed text-ink/80">{profileUser.bio}</p>
+                )}
+
+                <div className="mt-4 flex gap-5">
+                  <div className="text-center">
+                    <p className="font-bold tabular-nums text-ink">{profileUser.postCount}</p>
+                    <p className="text-xs text-muted">Posts</p>
+                  </div>
                   <Link
-                    href={`/messages?user=${profileUser.username}`}
-                    className="inline-flex items-center space-x-2 px-5 py-2.5 bg-white dark:bg-dark-50 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-full font-medium text-sm hover:border-brand-500 hover:text-brand-600 dark:hover:border-brand-500 dark:hover:text-brand-400 transition-all shadow-sm"
+                    href={`/profile/${profileUser.username}/followers`}
+                    className="group text-center"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Icons.Send className="w-4 h-4" />
+                    <p className="font-bold tabular-nums text-ink group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                      {profileUser.followerCount}
+                    </p>
+                    <p className="text-xs text-muted">Followers</p>
+                  </Link>
+                  <Link
+                    href={`/profile/${profileUser.username}/followers?tab=following`}
+                    className="group text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="font-bold tabular-nums text-ink group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                      {profileUser.followingCount}
+                    </p>
+                    <p className="text-xs text-muted">Following</p>
+                  </Link>
+                </div>
+
+                <p className="mt-3 text-xs text-muted">
+                  Joined {formatDistanceToNow(new Date(profileUser.createdAt), { addSuffix: true })}
+                </p>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {isOwnProfile ? (
+                <Link href="/settings/profile" className={buttonClass('secondary', 'md')}>
+                  <Icons.Settings className="h-4 w-4" />
+                  <span>Edit Profile</span>
+                </Link>
+              ) : (
+                <>
+                  <motion.button
+                    layout
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    className={profileUser.isFollowing ? buttonClass('secondary', 'md') : buttonClass('primary', 'md')}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={followLoading ? 'loading' : (profileUser.isFollowing ? 'unfollow' : 'follow')}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.15 }}
+                        className="flex items-center gap-2"
+                      >
+                        {followLoading ? (
+                          <>
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            <span>Processing</span>
+                          </>
+                        ) : profileUser.isFollowing ? 'Unfollow' : 'Follow'}
+                      </motion.span>
+                    </AnimatePresence>
+                  </motion.button>
+                  <Link href={`/messages?user=${profileUser.username}`} className={buttonClass('secondary', 'md')}>
+                    <Icons.Send className="h-4 w-4" />
                     <span>Message</span>
                   </Link>
-                </motion.div>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </Card>
       </motion.div>
 
       {/* User Posts */}
-      <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">Posts</h2>
-      
+      <h2 className="px-1 font-display text-lg font-bold text-ink">Posts</h2>
+
       {posts.length === 0 ? (
         <EmptyState
-          icon={<Icons.CreatePost className="w-8 h-8" />}
+          icon={<Icons.CreatePost className="h-8 w-8" />}
           title="No posts yet"
           description="When they post, it'll show up here"
         />
       ) : (
-        <div className="space-y-4">
-          {posts.map((post: any) => (
+        <div className="space-y-2">
+          {posts.map((post: any, index: number) => (
             <motion.div
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 * posts.indexOf(post) }}
+              transition={{ delay: 0.03 * index }}
             >
               <PostCard post={post} onDeleted={() => refetch()} />
             </motion.div>

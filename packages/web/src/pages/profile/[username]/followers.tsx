@@ -5,7 +5,11 @@ import { toast } from 'react-hot-toast';
 import { Icons } from '@/components/icons';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
-import Link from 'next/link';
+import { UserRow } from '@/components/ui/UserRow';
+import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Button, buttonClass } from '@/components/ui/Button';
+import { ListSkeleton } from '@/components/ui/Skeleton';
 
 const GET_FOLLOW_DATA = gql`
   query GetFollowData($username: String!) {
@@ -72,30 +76,27 @@ export default function FollowersPage() {
   const currentList = activeTab === 'followers' ? followers : following;
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      <div className="flex items-center space-x-4">
-        <button onClick={() => router.back()} aria-label="Go back" className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-dark-50">
-          <Icons.Back className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">@{username}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Connections</p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-xl space-y-6">
+      <PageHeader
+        back
+        onBack={() => router.back()}
+        title={`@${username}`}
+        subtitle="Connections"
+      />
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-dark-100" role="tablist" aria-label="Connections">
+      <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Connections">
         {(['followers', 'following'] as const).map((t) => (
           <button
             key={t}
             role="tab"
             aria-selected={activeTab === t}
             onClick={() => switchTab(t)}
-            className={`flex-1 py-3 text-center font-medium text-sm transition-all border-b-2 ${
+            className={
               activeTab === t
-                ? 'border-brand-600 text-brand-600 dark:text-brand-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+                ? buttonClass('primary', 'md')
+                : buttonClass('secondary', 'md')
+            }
           >
             {t === 'followers' ? 'Followers' : 'Following'}
           </button>
@@ -112,61 +113,47 @@ export default function FollowersPage() {
       )}
 
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-dark-50 rounded-2xl p-4 animate-pulse">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-24"></div>
-                  <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-16"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <Card className="p-2">
+          <ListSkeleton rows={5} />
+        </Card>
       ) : currentList.length === 0 ? (
         <EmptyState
-          icon={<Icons.Profile className="w-8 h-8" />}
+          icon={<Icons.Profile className="h-8 w-8" />}
           title={activeTab === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
           description={activeTab === 'followers' ? 'People who follow you will show up here' : 'People you follow will show up here'}
         />
       ) : (
-        <div className="space-y-2">
-          {currentList.map((person: any) => (
-            <div
-              key={person.id}
-              className="bg-white dark:bg-dark-50 rounded-2xl border border-slate-200/60 dark:border-dark-100 p-4 flex items-center justify-between hover:shadow-md transition-all"
-            >
-              <Link href={`/profile/${person.username}`} className="flex items-center space-x-3 flex-1 min-w-0">
-                {person.avatarUrl ? (
-                  <img src={person.avatarUrl} alt={`${person.displayName}'s avatar`} className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-semibold">
-                    {person.displayName.charAt(0)}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="font-medium text-slate-900 dark:text-white truncate">{person.displayName}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate">@{person.username}</p>
-                  {person.bio && <p className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 truncate">{person.bio}</p>}
-                </div>
-              </Link>
-              <button
-                onClick={() => {
-                  if (activeTab === 'followers') {
-                    removeFollower({ variables: { followerId: person.id } });
-                  } else {
-                    unfollowUser({ variables: { userId: person.id } });
-                  }
+        <Card className="p-2">
+          <div className="space-y-0.5">
+            {currentList.map((person: any) => (
+              <UserRow
+                key={person.id}
+                user={{
+                  id: person.id,
+                  username: person.username,
+                  displayName: person.displayName,
+                  avatarUrl: person.avatarUrl,
+                  bio: person.bio,
                 }}
-                className="btn-secondary-premium text-xs ml-3 flex-shrink-0"
-              >
-                {activeTab === 'followers' ? 'Remove' : 'Unfollow'}
-              </button>
-            </div>
-          ))}
-        </div>
+                action={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      if (activeTab === 'followers') {
+                        removeFollower({ variables: { followerId: person.id } });
+                      } else {
+                        unfollowUser({ variables: { userId: person.id } });
+                      }
+                    }}
+                  >
+                    {activeTab === 'followers' ? 'Remove' : 'Unfollow'}
+                  </Button>
+                }
+              />
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   );

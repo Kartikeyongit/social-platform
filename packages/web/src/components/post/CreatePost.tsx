@@ -3,8 +3,11 @@ import Link from 'next/link';
 import { useMutation, useLazyQuery, gql } from '@apollo/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '@/components/icons';
+import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
+import { cn } from '@/utils/cn';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const MAX_POST_LENGTH = 500;
@@ -63,7 +66,7 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPosted }) => {
       return () => clearTimeout(t);
     }
     setSuggestions([]);
-  }, [content]);
+  }, [content]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,18 +109,12 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPosted }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-5"
+      className="rounded-3xl border border-line bg-surface p-5 shadow-soft"
     >
       <form onSubmit={handleSubmit}>
-        <div className="flex space-x-3">
+        <div className="flex gap-3">
           <Link href={`/profile/${user?.username}`} className="flex-shrink-0">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">
-                {user?.displayName?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-            )}
+            <Avatar name={user?.displayName} username={user?.username} src={user?.avatarUrl} size="md" />
           </Link>
           <div className="flex-1">
             <textarea
@@ -130,77 +127,88 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPosted }) => {
               placeholder="What's on your mind?"
               rows={isExpanded ? 3 : 1}
               maxLength={MAX_POST_LENGTH}
-              className="w-full resize-none bg-transparent text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none min-h-[60px] text-sm"
+              className="w-full resize-none bg-transparent text-[15px] text-ink placeholder:text-muted focus:outline-none min-h-[44px]"
             />
 
-            {isExpanded && (
-              <>
-                {suggestions.length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-slate-400">AI:</span>
-                    {suggestions.map(tag => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => addHashtag(tag)}
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-50 text-brand-600 border border-brand-200 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-800/50 transition-colors"
-                      >
-                        <Icons.Hash className="w-3 h-3 mr-0.5" />
-                        {tag}
-                        <span className="ml-1 text-brand-400">+</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {mediaUrls.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {mediaUrls.map((url, i) => (
-                      <div key={i} className="relative">
-                        <img src={url} alt="" className="w-20 h-20 object-cover rounded-xl" />
+            <AnimatePresence initial={false}>
+              {isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="overflow-hidden"
+                >
+                  {suggestions.length > 0 && (
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted">AI:</span>
+                      {suggestions.map(tag => (
                         <button
+                          key={tag}
                           type="button"
-                          onClick={() => setMediaUrls(mediaUrls.filter((_, idx) => idx !== i))}
-                          aria-label="Remove image"
-                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
+                          onClick={() => addHashtag(tag)}
+                          className="tag-premium"
                         >
-                          ×
+                          <Icons.Hash className="h-3 w-3" />
+                          {tag}
                         </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
 
-                <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-dark-100">
-                  <div className="flex items-center space-x-3">
-                    <label className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-dark-50 text-slate-400 hover:text-brand-600 transition-colors cursor-pointer" aria-label="Attach image">
-                      <Icons.CreatePost className="w-4 h-4" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageUpload}
-                        disabled={isUploading}
-                      />
-                    </label>
-                    {content.length > 0 && (
-                      <span className={`text-[11px] font-medium ${remaining < 0 ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
-                        {remaining}
-                      </span>
-                    )}
+                  {mediaUrls.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {mediaUrls.map((url, i) => (
+                        <div key={i} className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="h-20 w-20 rounded-xl object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setMediaUrls(mediaUrls.filter((_, idx) => idx !== i))}
+                            aria-label="Remove image"
+                            className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow-sm"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
+                    <div className="flex items-center gap-2">
+                      <label
+                        className="flex cursor-pointer items-center gap-1.5 rounded-full p-2 text-muted transition-colors hover:bg-surface-2 hover:text-brand-600"
+                        aria-label="Attach image"
+                      >
+                        <Icons.CreatePost className="h-4 w-4" />
+                        {isUploading && <span className="text-[10px] font-medium">Uploading…</span>}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          disabled={isUploading}
+                        />
+                      </label>
+                      {content.length > 0 && (
+                        <span className={cn('text-[11px] font-medium tabular-nums', remaining < 0 ? 'text-red-500' : 'text-muted')}>
+                          {remaining}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      loading={isPosting}
+                      disabled={!content.trim() || remaining < 0}
+                    >
+                      Post
+                    </Button>
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    type="submit"
-                    disabled={!content.trim() || isPosting || remaining < 0}
-                    className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-all disabled:opacity-50"
-                  >
-                    {isPosting ? 'Posting…' : 'Post'}
-                  </motion.button>
-                </div>
-              </>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </form>

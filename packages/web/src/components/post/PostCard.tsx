@@ -8,7 +8,10 @@ import { motion } from 'framer-motion';
 import { Trash2 } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { Hashtag } from '@/components/ui/Hashtag';
+import { Avatar } from '@/components/ui/Avatar';
+import { MediaGrid } from '@/components/ui/MediaGrid';
 import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/utils/cn';
 
 const LIKE_POST = gql`
   mutation LikePost($postId: ID!) { likePost(postId: $postId) { id likeCount isLiked } }
@@ -23,14 +26,14 @@ const DELETE_POST = gql`
 `;
 
 const HeartBurst = () => (
-  <div className="absolute inset-0 pointer-events-none">
+  <div className="pointer-events-none absolute inset-0">
     {[...Array(6)].map((_, i) => (
       <motion.div
         key={i}
         initial={{ x: 0, y: 0, opacity: 1, scale: 0 }}
         animate={{ x: Math.cos(i * 60 * Math.PI / 180) * 18, y: Math.sin(i * 60 * Math.PI / 180) * 18, opacity: 0, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="absolute top-1/2 left-1/2 w-1.5 h-1.5 rounded-full"
+        className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full"
         style={{ background: ['#ef4444', '#f97316', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'][i] }}
       />
     ))}
@@ -54,12 +57,13 @@ interface PostCardProps {
       avatarUrl?: string;
     };
   };
+  variant?: 'list' | 'card';
   onCommentClick?: () => void;
   onDeleted?: () => void;
   children?: React.ReactNode;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onCommentClick, onDeleted, children }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, variant = 'list', onCommentClick, onDeleted, children }) => {
   const router = useRouter();
   const { user } = useAuth();
   const [liked, setLiked] = useState(post.isLiked);
@@ -73,6 +77,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onCommentClick, onDele
   const [deletePost, { loading: deletePending }] = useMutation(DELETE_POST);
 
   const isAuthor = user?.id === post.author.id;
+  const profileHref = `/profile/${post.author.username}`;
+  const postHref = `/post/${post.id}`;
 
   useEffect(() => () => {
     if (confirmTimer.current) clearTimeout(confirmTimer.current);
@@ -123,7 +129,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onCommentClick, onDele
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/post/${post.id}`;
+    const url = `${window.location.origin}${postHref}`;
     try {
       await navigator.clipboard.writeText(url);
       toast.success('Link copied');
@@ -135,108 +141,137 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onCommentClick, onDele
   const handleComment = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onCommentClick) onCommentClick();
-    else router.push(`/post/${post.id}`);
+    else router.push(postHref);
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft hover:shadow-lg transition-all duration-300 p-5"
+      className={cn(
+        'relative',
+        variant === 'list'
+          ? 'border-b border-line px-1 py-5 [&:last-child]:border-b-0'
+          : 'rounded-3xl border border-line bg-surface p-5 shadow-soft',
+      )}
     >
       <Link
-        href={`/post/${post.id}`}
+        href={postHref}
         aria-label={`View post by ${post.author.displayName}`}
-        className="absolute inset-0 z-10 rounded-3xl focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none"
+        className="absolute inset-0 z-10 rounded-[inherit] focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none"
       />
 
-      <div className="relative z-20 mb-3 flex items-start justify-between">
-        <Link href={`/profile/${post.author.username}`} onClick={e => e.stopPropagation()} className="flex items-center space-x-3 group">
-          {post.author.avatarUrl ? (
-            <img src={post.author.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">
-              {post.author.displayName.charAt(0).toUpperCase()}
+      <div className="relative z-20 flex gap-3">
+        <Avatar
+          name={post.author.displayName}
+          username={post.author.username}
+          src={post.author.avatarUrl}
+          size="md"
+          href={profileHref}
+          className="mt-0.5 flex-shrink-0"
+        />
+
+        <div className="min-w-0 flex-1">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-2">
+            <Link
+              href={profileHref}
+              onClick={(e) => e.stopPropagation()}
+              className="group flex min-w-0 items-baseline gap-x-1.5"
+            >
+              <span className="truncate text-sm font-semibold text-ink group-hover:underline">
+                {post.author.displayName}
+              </span>
+              <span className="truncate text-xs text-muted">
+                @{post.author.username} · {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+              </span>
+            </Link>
+
+            {isAuthor && (
+              <button
+                onClick={handleDelete}
+                disabled={deletePending}
+                aria-label={confirmingDelete ? 'Confirm delete post' : 'Delete post'}
+                className={cn(
+                  'flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold transition-colors',
+                  confirmingDelete
+                    ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                    : 'text-muted/60 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20',
+                )}
+              >
+                {deletePending ? (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+                ) : confirmingDelete ? (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Delete?</span>
+                  </>
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Content */}
+          <p className="mt-1 text-[15px] leading-relaxed text-ink">{post.content}</p>
+
+          {post.mediaUrls?.length > 0 && (
+            <div className="mt-3">
+              <MediaGrid mediaUrls={post.mediaUrls} alt={`Image posted by ${post.author.displayName}`} />
             </div>
           )}
-          <div>
-            <h3 className="font-semibold text-sm text-slate-900 dark:text-white group-hover:underline">{post.author.displayName}</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">@{post.author.username} · {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</p>
+
+          {post.hashtags?.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {post.hashtags.map(tag => (
+                <Hashtag key={tag} name={tag} />
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="mt-4 flex max-w-md items-center gap-6">
+            <motion.button
+              whileTap={{ scale: 0.85 }}
+              onClick={handleLike}
+              aria-pressed={liked}
+              aria-label={liked ? 'Unlike post' : 'Like post'}
+              className={cn(
+                'group relative flex items-center gap-1.5 rounded-full py-1.5 transition-colors',
+                liked ? 'text-red-500' : 'text-muted hover:text-red-500',
+              )}
+            >
+              {burst && <HeartBurst />}
+              <Icons.Like
+                className={cn('relative z-10 h-5 w-5 transition-transform group-hover:scale-110', liked && 'fill-current text-red-500')}
+              />
+              <span className="relative z-10 text-sm font-medium tabular-nums">{likeCount}</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleComment}
+              aria-label={onCommentClick ? 'Toggle comments' : 'View comments'}
+              className="group flex items-center gap-1.5 rounded-full py-1.5 text-muted transition-colors hover:text-brand-500"
+            >
+              <Icons.Comment className="h-5 w-5 transition-transform group-hover:scale-110" />
+              <span className="text-sm font-medium tabular-nums">{post.commentCount}</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleShare}
+              aria-label="Copy post link"
+              className="group ml-auto flex items-center gap-1.5 rounded-full py-1.5 text-muted transition-colors hover:text-green-500"
+            >
+              <Icons.Share className="h-5 w-5 transition-transform group-hover:scale-110" />
+            </motion.button>
           </div>
-        </Link>
-        {isAuthor && (
-          <button
-            onClick={handleDelete}
-            disabled={deletePending}
-            aria-label={confirmingDelete ? 'Confirm delete post' : 'Delete post'}
-            className={`ml-3 flex-shrink-0 flex items-center space-x-1 rounded-full px-2 py-1 text-xs font-semibold transition-colors ${
-              confirmingDelete
-                ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
-                : 'text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-            }`}
-          >
-            {deletePending ? (
-              <span className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
-            ) : confirmingDelete ? (
-              <>
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete?</span>
-              </>
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-          </button>
-        )}
-      </div>
 
-      <p className="text-slate-800 dark:text-slate-200 mb-3 text-sm leading-relaxed">{post.content}</p>
-
-      {post.mediaUrls?.length > 0 && (
-        <div className="mb-3 rounded-2xl overflow-hidden">
-          <img src={post.mediaUrls[0]} alt={`Image posted by ${post.author.displayName}`} className="w-full h-48 object-cover" />
+          {children && <div className="relative z-20 mt-4">{children}</div>}
         </div>
-      )}
-
-      {post.hashtags?.length > 0 && (
-        <div className="relative z-20 flex flex-wrap gap-1.5 mb-3">
-          {post.hashtags.map(tag => (
-            <Hashtag key={tag} name={tag} />
-          ))}
-        </div>
-      )}
-
-      <div className="relative z-20 flex items-center pt-3 border-t border-slate-100 dark:border-dark-100">
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          onClick={handleLike}
-          aria-pressed={liked}
-          aria-label={liked ? 'Unlike post' : 'Like post'}
-          className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ${liked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}
-        >
-          {burst && <HeartBurst />}
-          <Icons.Like className={`w-4 h-4 transition-all group-hover:scale-110 relative z-10 ${liked ? 'fill-red-500' : ''}`} />
-          <span className="text-xs font-medium relative z-10">{likeCount}</span>
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={handleComment}
-          aria-label={onCommentClick ? 'Toggle comments' : 'View comments'}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group text-slate-400 hover:text-brand-500"
-        >
-          <Icons.Comment className="w-4 h-4 transition-all group-hover:scale-110" />
-          <span className="text-xs font-medium">{post.commentCount}</span>
-        </motion.button>
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={handleShare}
-          aria-label="Copy post link"
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl transition-colors group ml-auto text-slate-400 hover:text-green-500"
-        >
-          <Icons.Share className="w-4 h-4 transition-all group-hover:scale-110" />
-        </motion.button>
       </div>
-
-      {children && <div className="relative z-20">{children}</div>}
     </motion.div>
   );
 };

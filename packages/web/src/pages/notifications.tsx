@@ -1,12 +1,15 @@
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useSubscription, gql } from '@apollo/client';
-import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
-import { getNotificationHref, getNotificationIcon } from '@/utils/notifications';
+import { groupNotificationsByDay } from '@/utils/notifications';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
-import Link from 'next/link';
+import { NotificationRow } from '@/components/ui/NotificationRow';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ListSkeleton } from '@/components/ui/Skeleton';
+import { staggerContainer, listItem } from '@/utils/motion';
 
 const GET_NOTIFICATIONS = gql`
   query GetNotifications($limit: Int) {
@@ -75,31 +78,29 @@ export default function NotificationsPage() {
     },
   });
 
-  // Visiting the page marks everything read
-  useEffect(() => {
-    if (unreadCount > 0 && !markingRead) markAllRead();
-  }, [data?.unreadNotificationCount]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const notifications = data?.notifications || [];
   const unreadCount = data?.unreadNotificationCount || 0;
 
+  // Visiting the page marks everything read
+  useEffect(() => {
+    if (unreadCount > 0 && !markingRead) markAllRead();
+  }, [unreadCount, markingRead]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const groups = groupNotificationsByDay(notifications);
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white font-display">Notifications</h1>
-            {unreadCount > 0 && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{unreadCount} unread</p>
-            )}
-          </div>
-          {unreadCount > 0 && (
-            <button onClick={() => markAllRead()} disabled={markingRead} className="btn-secondary-premium text-sm disabled:opacity-50">
-              {markingRead ? 'Marking...' : 'Mark all read'}
-            </button>
-          )}
-        </div>
-      </motion.div>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <PageHeader
+        title="Notifications"
+        subtitle={unreadCount > 0 ? `${unreadCount} unread` : 'You are all caught up'}
+        actions={
+          unreadCount > 0 ? (
+            <Button variant="secondary" size="sm" onClick={() => markAllRead()} loading={markingRead}>
+              Mark all read
+            </Button>
+          ) : undefined
+        }
+      />
 
       {error && !loading && (
         <ErrorState
@@ -110,65 +111,35 @@ export default function NotificationsPage() {
       )}
 
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-4 animate-pulse">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-dark-100"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-slate-200 dark:bg-dark-100 rounded-full w-48"></div>
-                  <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ListSkeleton rows={5} />
       ) : notifications.length === 0 ? (
         <EmptyState
-          icon={<Icons.Notifications className="w-8 h-8" />}
+          icon={<Icons.Notifications className="h-8 w-8" />}
           title="No notifications yet"
           description="You're all caught up!"
         />
       ) : (
-        <div className="space-y-2">
-          {notifications.map((notification: any) => {
-            const href = getNotificationHref(notification);
-            const icon = getNotificationIcon(notification.type);
-            const inner = (
-              <div className="flex items-center space-x-3">
-                {icon}
-                <div className="flex-1">
-                  <p className={`text-sm ${!notification.read ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                    <span className="font-medium">{notification.actor.displayName}</span>
-                    {' '}
-                    {notification.type === 'LIKE' && 'liked your post'}
-                    {notification.type === 'COMMENT' && 'commented on your post'}
-                    {notification.type === 'FOLLOW' && 'started following you'}
-                    {notification.type === 'MESSAGE' && 'sent you a message'}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                  </p>
-                </div>
-                {!notification.read && (
-                  <div className="w-2.5 h-2.5 bg-brand-500 rounded-full"></div>
-                )}
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="space-y-6"
+        >
+          {groups.map((group) => (
+            <div key={group.label} className="space-y-2">
+              <p className="px-1 text-xs font-semibold uppercase tracking-widest text-muted">
+                {group.label}
+              </p>
+              <div className="space-y-2">
+                {group.items.map((n) => (
+                  <motion.div key={n.id} variants={listItem}>
+                    <NotificationRow notification={n} />
+                  </motion.div>
+                ))}
               </div>
-            );
-            const base = `block bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-4 hover:shadow-md transition-all ${
-              !notification.read ? 'border-l-4 border-brand-500 bg-brand-50/30 dark:bg-brand-900/10' : ''
-            }`;
-            return href ? (
-              <Link key={notification.id} href={href} className={base}>
-                {inner}
-              </Link>
-            ) : (
-              <div key={notification.id} className={base}>
-                {inner}
-              </div>
-            );
-          })}
-        </div>
+            </div>
+          ))}
+        </motion.div>
       )}
     </div>
   );

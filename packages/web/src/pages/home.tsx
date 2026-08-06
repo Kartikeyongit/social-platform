@@ -137,24 +137,33 @@ export default function HomePage() {
           />
         )}
 
-        {allPosts.map((post: any) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            onCommentClick={() => toggleComments(post.id)}
-            onDeleted={() => setAllPosts(prev => prev.filter(p => p.id !== post.id))}
-          >
-            <CommentSection
-              postId={post.id}
-              open={openComments.has(post.id)}
-              onCommentAdded={() => bumpCommentCount(post.id)}
-            />
-          </PostCard>
-        ))}
+        {allPosts.length > 0 && (
+          <div>
+            {allPosts.map((post: any) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onCommentClick={() => toggleComments(post.id)}
+                onDeleted={() => setAllPosts(prev => prev.filter(p => p.id !== post.id))}
+              >
+                <CommentSection
+                  postId={post.id}
+                  open={openComments.has(post.id)}
+                  onCommentAdded={() => bumpCommentCount(post.id)}
+                />
+              </PostCard>
+            ))}
+          </div>
+        )}
 
-        <div ref={loaderRef} className="py-8 flex flex-col items-center">
-          {isLoadingMore && <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mb-2" />}
-          {!hasMore && allPosts.length > 0 && <p className="text-xs text-slate-400 dark:text-slate-500">You've reached the end</p>}
+        <div ref={loaderRef} className="flex flex-col items-center py-8">
+          {isLoadingMore && <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />}
+          {!hasMore && allPosts.length > 0 && (
+            <p className="text-xs font-medium text-muted">
+              You're all caught up
+              <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-brand-500 align-middle" />
+            </p>
+          )}
         </div>
       </div>
       <div className="hidden lg:block w-80 flex-shrink-0">

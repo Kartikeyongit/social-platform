@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { toast } from 'react-hot-toast';
-import { formatDistanceToNow } from 'date-fns';
 import { Icons } from '@/components/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import Link from 'next/link';
 import { PostCard } from '@/components/post/PostCard';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PostSkeleton } from '@/components/ui/Skeleton';
+import { CommentRow } from '@/components/ui/CommentRow';
+import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const GET_POST = gql`
   query GetPost($postId: ID!) {
@@ -80,7 +82,7 @@ export default function PostDetailPage() {
 
   if (error && !loading) {
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="mx-auto max-w-xl">
         <ErrorState
           title="Couldn't load this post"
           message={error.message}
@@ -92,7 +94,7 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="mx-auto max-w-xl">
         <PostSkeleton />
       </div>
     );
@@ -103,76 +105,50 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <div className="max-w-xl mx-auto text-center py-12">
-        <p className="text-slate-500 dark:text-slate-400">Post not found</p>
+      <div className="mx-auto max-w-xl space-y-4">
+        <PageHeader title="Post" back onBack={() => router.back()} />
+        <p className="py-12 text-center text-sm text-muted">Post not found</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-4">
-      {/* Back button */}
-      <button onClick={() => router.back()} className="flex items-center space-x-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
-        <Icons.Back className="w-4 h-4" />
-        <span className="text-sm">Back</span>
-      </button>
+    <div className="mx-auto max-w-xl space-y-4">
+      <PageHeader title="Post" back onBack={() => (window.history.length > 1 ? router.back() : router.push('/home'))} />
 
-      <PostCard post={post} onDeleted={() => router.push('/home')}>
-        {/* Comments */}
-        <div className="mt-4 space-y-4">
-          {/* Comment Input */}
-          <div className="flex space-x-3">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                {user?.displayName?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-            )}
-            <div className="flex-1 flex space-x-2">
+      <PostCard post={post} variant="card" onDeleted={() => router.push('/home')}>
+        <div className="mt-4 space-y-5 border-t border-line pt-4">
+          <div className="flex items-center gap-3">
+            <Avatar
+              name={user?.displayName}
+              username={user?.username}
+              src={user?.avatarUrl}
+              size="sm"
+              className="flex-shrink-0"
+            />
+            <div className="flex flex-1 gap-2">
               <input
                 type="text"
                 value={commentInput}
                 onChange={(e) => setCommentInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleComment()}
+                onKeyDown={(e) => e.key === 'Enter' && handleComment()}
                 placeholder="Post your reply"
-                className="input-premium flex-1 text-sm py-2"
+                className="input-premium flex-1 py-2 text-sm"
               />
-              <button onClick={handleComment} className="btn-primary-premium px-4 text-sm">
+              <Button onClick={handleComment} disabled={!commentInput.trim()} className="flex-shrink-0">
                 Reply
-              </button>
+              </Button>
             </div>
           </div>
 
-          {/* Comments List */}
           {comments.length === 0 ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500">No comments yet — be the first!</p>
+            <p className="text-sm text-muted">No comments yet — be the first!</p>
           ) : (
-            comments.map((comment: any) => (
-              <div key={comment.id} className="flex space-x-3">
-                <Link href={`/profile/${comment.author.username}`}>
-                  {comment.author.avatarUrl ? (
-                    <img src={comment.author.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                      {comment.author.displayName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </Link>
-                <div>
-                  <p className="text-sm">
-                    <Link href={`/profile/${comment.author.username}`} className="font-semibold text-slate-900 dark:text-white hover:underline">
-                      {comment.author.displayName}
-                    </Link>
-                    {' '}
-                    <span className="text-slate-700 dark:text-slate-300">{comment.content}</span>
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                  </p>
-                </div>
-              </div>
-            ))
+            <div className="space-y-5">
+              {comments.map((comment: any) => (
+                <CommentRow key={comment.id} comment={comment} />
+              ))}
+            </div>
           )}
         </div>
       </PostCard>

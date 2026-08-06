@@ -1,21 +1,44 @@
 @import './design-system.css';
 
-.gradient-text {
-  @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+:root {
+  --app-bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f6f8;
+  --line: rgba(15, 23, 42, 0.08);
+  --ink: #0f172a;
+  --muted: #64748b;
 }
 
-.glass-effect {
-  @apply bg-white/80 backdrop-blur-lg border border-white/20;
+.dark {
+  --app-bg: #0a0c10;
+  --surface: #12151c;
+  --surface-2: #191e26;
+  --line: rgba(255, 255, 255, 0.08);
+  --ink: #eef1f6;
+  --muted: #8b95a7;
 }
 
-.dark .glass-effect {
-  @apply bg-gray-900/80 border-gray-700/20;
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
-.hover-lift {
-  @apply transition-transform duration-200 hover:-translate-y-1;
+.animate-shimmer {
+  animation: shimmer 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 :where(button, a, input, textarea, select, [role='tab']) {
-  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/70 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-dark-0;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/70 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-surface;
 }

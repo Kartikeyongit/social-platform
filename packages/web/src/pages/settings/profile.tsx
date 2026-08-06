@@ -5,6 +5,10 @@ import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/icons';
 import { useRouter } from 'next/router';
+import { Avatar } from '@/components/ui/Avatar';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { fadeUp } from '@/utils/motion';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -50,29 +54,76 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
-      <button onClick={() => router.back()} className="flex items-center space-x-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
-        <Icons.Back className="w-5 h-5" /><span className="text-sm font-medium">Back</span>
-      </button>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">Edit Profile</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Update your profile information</p>
+    <div className="mx-auto max-w-xl space-y-6">
+      <motion.div variants={fadeUp} initial="hidden" animate="visible">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Edit Profile</h1>
+        <p className="mt-1 text-muted">Update your profile information</p>
       </motion.div>
       <form onSubmit={handleSubmit}>
-        <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft p-6 space-y-6">
-          <div className="flex items-center space-x-4">
+        <Card className="space-y-6 p-6">
+          <div className="flex items-center gap-4">
             <div className="relative">
-              {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full object-cover shadow-md" /> :
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-md">{displayName?.charAt(0)?.toUpperCase() || user?.displayName?.charAt(0)?.toUpperCase() || 'U'}</div>}
-              <button type="button" aria-label="Upload avatar" onClick={() => fileInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-8 h-8 bg-brand-600 hover:bg-brand-700 rounded-full flex items-center justify-center text-white shadow-md transition-colors" disabled={isUploading}><Icons.CreatePost className="w-4 h-4"/></button>
+              <Avatar
+                name={displayName || user?.displayName || 'U'}
+                username={user?.username}
+                src={avatarUrl}
+                size="lg"
+                className="shadow-card"
+              />
+              <button
+                type="button"
+                aria-label="Upload avatar"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white shadow-card transition-colors hover:bg-brand-700"
+                disabled={isUploading}
+              >
+                <Icons.CreatePost className="h-4 w-4" />
+              </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             </div>
-            <div><p className="font-medium text-slate-900 dark:text-white">{displayName || user?.displayName}</p><p className="text-sm text-slate-500 dark:text-slate-400">@{user?.username}</p>{isUploading && <p className="text-xs text-brand-600 mt-1">Uploading...</p>}</div>
+            <div className="min-w-0">
+              <p className="truncate font-medium text-ink">{displayName || user?.displayName}</p>
+              <p className="text-sm text-muted">@{user?.username}</p>
+              {isUploading && <p className="mt-1 text-xs text-brand-600">Uploading...</p>}
+            </div>
           </div>
-          <div><label htmlFor="settings-displayName" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Display Name</label><input id="settings-displayName" type="text" value={displayName} onChange={e=>setDisplayName(e.target.value)} className="input-premium" placeholder="Your display name" /></div>
-          <div><label htmlFor="settings-bio" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Bio</label><textarea id="settings-bio" value={bio} onChange={e=>setBio(e.target.value)} className="input-premium resize-none" rows={3} placeholder="Tell us about yourself..." maxLength={160} /><p className="text-xs text-slate-400 dark:text-slate-500 mt-1 text-right">{bio.length}/160</p></div>
-          <motion.button whileHover={{scale:1.01}} whileTap={{scale:0.99}} type="submit" disabled={loading} className="btn-primary-premium w-full py-3">{loading ? <span className="flex items-center space-x-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Saving...</span></span> : 'Save Changes'}</motion.button>
-        </div>
+
+          <div>
+            <label htmlFor="settings-displayName" className="mb-2 block text-sm font-medium text-ink">
+              Display Name
+            </label>
+            <input
+              id="settings-displayName"
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="input-premium"
+              placeholder="Your display name"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="settings-bio" className="mb-2 block text-sm font-medium text-ink">
+              Bio
+            </label>
+            <textarea
+              id="settings-bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              className="input-premium resize-none"
+              rows={3}
+              placeholder="Tell us about yourself..."
+              maxLength={160}
+            />
+            <p className="mt-1 text-right text-xs text-muted">{bio.length}/160</p>
+          </div>
+
+          <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+            <Button type="submit" loading={loading} size="lg" className="w-full">
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </motion.div>
+        </Card>
       </form>
     </div>
   );
