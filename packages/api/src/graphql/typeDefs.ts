@@ -151,6 +151,7 @@ export const typeDefs = `#graphql
     searchHashtags(query: String!, limit: Int): [Hashtag!]!
     trendingHashtags(limit: Int): [Hashtag!]!
     searchUsers(query: String!, limit: Int): [User!]!
+    postsByHashtag(hashtag: String!, limit: Int, cursor: String): PostConnection!
     
     # Recommendations (ML)
     recommendedPosts(limit: Int): [Post!]!

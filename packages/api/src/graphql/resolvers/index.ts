@@ -204,6 +204,26 @@ export const resolvers = {
       });
     },
     
+    postsByHashtag: async (_: any, { hashtag, limit, cursor }: any) => {
+      const tag = hashtag.trim().replace(/^#/, '').toLowerCase();
+      if (!tag) throw new GraphQLError('Hashtag is required');
+      const take = clampLimit(limit);
+      const cursorData = decodeCursor(cursor);
+      const posts = await prisma.post.findMany({
+        where: {
+          hashtags: { has: tag },
+          ...(cursorData ? beforeCursorFilter(cursorData) : {}),
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: take + 1,
+        include: { author: true },
+      });
+      const hasNextPage = posts.length > take;
+      const resultPosts = posts.slice(0, take);
+      const edges = resultPosts.map(post => ({ node: post, cursor: encodeCursor(post.createdAt, post.id) }));
+      return { edges, pageInfo: { hasNextPage, endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null } };
+    },
+    
     suggestHashtags: async (_: any, { content }: { content: string }) => {
       return suggestHashtags(content);
     },
@@ -396,9 +416,10 @@ export const resolvers = {
     createPost: async (_: any, { input }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');
       const data = validate(CreatePostSchema, input);
+      const hashtags = (data.hashtags || []).map((t: string) => t.replace(/^#/, '').toLowerCase());
       const post = await prisma.$transaction(async (tx) => {
         const created = await tx.post.create({
-          data: { content: data.content, hashtags: data.hashtags, mediaUrls: data.mediaUrls, authorId: userId },
+          data: { content: data.content, hashtags, mediaUrls: data.mediaUrls, authorId: userId },
           include: { author: true },
         });
         if (created.hashtags.length > 0) {

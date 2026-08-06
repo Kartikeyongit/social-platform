@@ -35,6 +35,21 @@ const SEARCH = gql`
   }
 `;
 
+const POSTS_BY_HASHTAG = gql`
+  query PostsByHashtag($hashtag: String!, $limit: Int, $cursor: String) {
+    postsByHashtag(hashtag: $hashtag, limit: $limit, cursor: $cursor) {
+      edges {
+        node {
+          id content mediaUrls hashtags likeCount commentCount isLiked createdAt
+          author { id username displayName avatarUrl }
+        }
+        cursor
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
 const FOLLOW_USER = gql`
   mutation FollowUser($userId: ID!) { followUser(userId: $userId) { id isFollowing } }
 `;
@@ -59,7 +74,16 @@ export default function ExplorePage() {
   const [currentCursor, setCurrentCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [tagPosts, setTagPosts] = useState<any[]>([]);
+  const [tagCursor, setTagCursor] = useState<string | null>(null);
+  const [tagHasMore, setTagHasMore] = useState(true);
+  const [isLoadingTagMore, setIsLoadingTagMore] = useState(false);
+  const [tagLoading, setTagLoading] = useState(false);
+  const [tagError, setTagError] = useState<any>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  const searchTerm = debounced.replace(/^#/, '').trim();
+  const hasHashtagMode = debounced.startsWith('#') && searchTerm.length > 0;
 
   const applyFollow = (cache: any, { data }: any) => {
     const u = data?.followUser || data?.unfollowUser;
@@ -88,15 +112,43 @@ export default function ExplorePage() {
     onCompleted: (d) => setResults(d),
   });
 
+  const [getTagPosts] = useLazyQuery(POSTS_BY_HASHTAG, {
+    onCompleted: (d) => {
+      setTagLoading(false);
+      setTagError(null);
+      const edges = d?.postsByHashtag?.edges || [];
+      setTagPosts(prev => {
+        const ids = new Set(prev.map(p => p.id));
+        return [...prev, ...edges.map((e: any) => e.node).filter((p: any) => !ids.has(p.id))];
+      });
+      setTagHasMore(!!d?.postsByHashtag?.pageInfo?.hasNextPage);
+      if (d?.postsByHashtag?.pageInfo?.endCursor) setTagCursor(d.postsByHashtag.pageInfo.endCursor);
+    },
+    onError: (e) => { setTagLoading(false); setTagError(e); },
+  });
+
   useEffect(() => {
     if (debounced) {
       setIsSearching(true);
-      getSearch({ variables: { query: debounced, limit: 20 } });
+      getSearch({ variables: { query: searchTerm, limit: 20 } });
     } else {
       setIsSearching(false);
       setResults(null);
     }
-  }, [debounced]);
+  }, [debounced]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setTagPosts([]);
+    setTagCursor(null);
+    setTagHasMore(true);
+    setTagError(null);
+    if (hasHashtagMode) {
+      setTagLoading(true);
+      getTagPosts({ variables: { hashtag: searchTerm, limit: POSTS_PER_PAGE } });
+    } else {
+      setTagLoading(false);
+    }
+  }, [debounced]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, loading, error, fetchMore, refetch } = useQuery(EXPLORE_FEED, {
     variables: { limit: POSTS_PER_PAGE },
@@ -114,6 +166,15 @@ export default function ExplorePage() {
   });
 
   const loadMore = async () => {
+    if (hasHashtagMode) {
+      if (!tagHasMore || !tagCursor || isLoadingTagMore || tagLoading) return;
+      setIsLoadingTagMore(true);
+      try {
+        await getTagPosts({ variables: { hashtag: searchTerm, limit: POSTS_PER_PAGE, cursor: tagCursor } });
+      } catch (e) {}
+      finally { setIsLoadingTagMore(false); }
+      return;
+    }
     if (!hasMore || !currentCursor || isLoadingMore || loading) return;
     setIsLoadingMore(true);
     try {
@@ -139,7 +200,7 @@ export default function ExplorePage() {
     }, { rootMargin: '300px' });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [currentCursor, hasMore, loading, isLoadingMore]);
+  }, [currentCursor, hasMore, loading, isLoadingMore, tagCursor, tagHasMore, isLoadingTagMore, tagLoading, hasHashtagMode, searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const users = results?.users || [];
   const hashtags = results?.hashtags || [];
@@ -165,6 +226,49 @@ export default function ExplorePage() {
 
       {isSearching ? (
         <div className="space-y-4">
+          {hasHashtagMode && (
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white flex items-center space-x-2 pt-1">
+                <Icons.Hash className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                <span>Posts tagged <span className="text-brand-600 dark:text-brand-400">#{searchTerm}</span></span>
+              </h2>
+
+              {tagError && !tagLoading && (
+                <ErrorState
+                  title="Couldn't load posts for this hashtag"
+                  message={tagError.message}
+                  onRetry={() => {
+                    setTagLoading(true);
+                    getTagPosts({ variables: { hashtag: searchTerm, limit: POSTS_PER_PAGE } });
+                  }}
+                />
+              )}
+
+              {tagLoading && tagPosts.length === 0 && (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => <PostSkeleton key={i} />)}
+                </div>
+              )}
+
+              {tagPosts.map((post: any) => (
+                <PostCard key={post.id} post={post} onDeleted={() => setTagPosts(prev => prev.filter(p => p.id !== post.id))} />
+              ))}
+
+              {!tagLoading && !tagError && tagPosts.length === 0 && (
+                <EmptyState
+                  icon={<Icons.Hash className="w-8 h-8" />}
+                  title={`No posts with #${searchTerm}`}
+                  description="Be the first to post with this hashtag"
+                />
+              )}
+
+              <div ref={loaderRef} className="py-8 flex flex-col items-center">
+                {isLoadingTagMore && <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mb-2" />}
+                {!tagHasMore && tagPosts.length > 0 && <p className="text-xs text-slate-400 dark:text-slate-500">You've reached the end</p>}
+              </div>
+            </div>
+          )}
+
           {searchLoading && results === null && (
             <div className="space-y-3">
               {[...Array(4)].map((_, i) => (
@@ -181,7 +285,7 @@ export default function ExplorePage() {
             </div>
           )}
 
-          {!searchLoading && results !== null && users.length === 0 && hashtags.length === 0 && (
+          {!searchLoading && results !== null && users.length === 0 && hashtags.length === 0 && !hasHashtagMode && (
             <EmptyState
               icon={<Icons.Search className="w-8 h-8" />}
               title="No results"

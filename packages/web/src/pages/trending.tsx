@@ -101,7 +101,7 @@ export default function TrendingPage() {
             {hashtags.map((tag: any, index: number) => (
               <Link
                 key={tag.name}
-                href={`/explore?q=#${tag.name}`}
+                href={`/explore?q=${encodeURIComponent(`#${tag.name}`)}`}
                 className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors group"
               >
                 <div className="flex items-center space-x-3">
