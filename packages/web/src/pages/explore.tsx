@@ -190,7 +190,10 @@ export default function ExplorePage() {
       <motion.div variants={fadeUp} initial="hidden" animate="visible">
         <PageHeader title="Explore" subtitle="Search people, hashtags and posts" />
         <div className="relative">
-          <Icons.Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+          <Icons.Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-muted"
+            />
           <input
             type="text"
             value={searchInput}

@@ -127,7 +127,7 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPosted }) => {
               placeholder="What's on your mind?"
               rows={isExpanded ? 3 : 1}
               maxLength={MAX_POST_LENGTH}
-              className="w-full resize-none bg-transparent text-[15px] text-ink placeholder:text-muted focus:outline-none min-h-[44px]"
+              className="w-full resize-none bg-transparent text-[15px] text-ink placeholder:text-muted focus:outline-none focus-visible:ring-0 min-h-[44px]"
             />
 
             <AnimatePresence initial={false}>
