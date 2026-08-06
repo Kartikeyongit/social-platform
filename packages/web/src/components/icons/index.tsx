@@ -20,6 +20,16 @@ import {
   Settings,
   ArrowLeft,
   AlertTriangle,
+  AtSign,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Check,
+  ShieldCheck,
+  Globe,
+  Zap,
+  Layers,
 } from 'lucide-react';
 
 export const Icons = {
@@ -44,4 +54,14 @@ export const Icons = {
   Settings: (props: any) => <Settings {...props} />,
   Back: (props: any) => <ArrowLeft {...props} />,
   Alert: (props: any) => <AlertTriangle {...props} />,
+  AtSign: (props: any) => <AtSign {...props} />,
+  Mail: (props: any) => <Mail {...props} />,
+  Lock: (props: any) => <Lock {...props} />,
+  Eye: (props: any) => <Eye {...props} />,
+  EyeOff: (props: any) => <EyeOff {...props} />,
+  Check: (props: any) => <Check {...props} />,
+  ShieldCheck: (props: any) => <ShieldCheck {...props} />,
+  Globe: (props: any) => <Globe {...props} />,
+  Zap: (props: any) => <Zap {...props} />,
+  Layers: (props: any) => <Layers {...props} />,
 };

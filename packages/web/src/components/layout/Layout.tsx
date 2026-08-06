@@ -13,7 +13,7 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  const isAuthPage = ['/login', '/register'].includes(router.pathname);
+  const isAuthPage = ['/login', '/register', '/auth/callback'].includes(router.pathname);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   if (loading) {

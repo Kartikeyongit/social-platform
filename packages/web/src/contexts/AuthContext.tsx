@@ -15,6 +15,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (token: string, user: User) => void;
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -22,7 +23,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, token: null, login: () => {}, logout: () => {}, refreshUser: async () => {},
+  user: null, token: null, login: () => {}, loginWithToken: async () => {}, logout: () => {}, refreshUser: async () => {},
   isAuthenticated: false, loading: true,
 });
 
@@ -66,6 +67,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     router.push('/home');
   };
 
+  const loginWithToken = async (newToken: string) => {
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+    await fetchUser(newToken);
+    router.replace('/home');
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -79,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isAuthenticated: !!token, loading }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithToken, logout, refreshUser, isAuthenticated: !!token, loading }}>
       {children}
     </AuthContext.Provider>
   );

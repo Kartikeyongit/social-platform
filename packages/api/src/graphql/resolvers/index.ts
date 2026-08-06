@@ -393,7 +393,7 @@ export const resolvers = {
     login: async (_: any, { email, password }: any) => {
       const input = validate(LoginSchema, { email, password });
       const user = await prisma.user.findUnique({ where: { email: input.email } });
-      if (!user) throw new GraphQLError('Invalid credentials');
+      if (!user || !user.passwordHash) throw new GraphQLError('Invalid credentials');
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) throw new GraphQLError('Invalid credentials');
       const token = signToken(user.id);

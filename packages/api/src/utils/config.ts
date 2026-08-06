@@ -36,4 +36,11 @@ export const config = {
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
+  oauth: {
+    googleClientId: process.env.OAUTH_GOOGLE_CLIENT_ID || '',
+    googleClientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET || '',
+    githubClientId: process.env.OAUTH_GITHUB_CLIENT_ID || '',
+    githubClientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET || '',
+    webRedirect: (process.env.OAUTH_WEB_REDIRECT || 'http://localhost:3000').replace(/\/+$/, ''),
+  },
 };

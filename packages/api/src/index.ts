@@ -14,6 +14,7 @@ import { resolvers } from './graphql/resolvers';
 import { upload, hasValidImageSignature } from './utils/upload';
 import { uploadBuffer } from './utils/cloudinary';
 import { getUserIdFromAuthHeader, verifyToken } from './utils/auth';
+import { startOAuth, handleOAuthCallback } from './utils/oauth';
 import { config } from './utils/config';
 import { prisma } from './utils/db';
 import { createLoaders, Loaders } from './utils/loaders';
@@ -70,6 +71,30 @@ async function startServer() {
 
   await server.start();
   app.use(express.json());
+
+  // OAuth (Google / GitHub) - authorization-code flow
+  app.get('/auth/config', (_req, res) => {
+    res.json({
+      google: !!config.oauth.googleClientId && !!config.oauth.googleClientSecret,
+      github: !!config.oauth.githubClientId && !!config.oauth.githubClientSecret,
+    });
+  });
+  app.get('/auth/google', (req, res) => {
+    try {
+      startOAuth('google', req, res);
+    } catch (error) {
+      res.redirect(`${config.oauth.webRedirect}/auth/callback?error=${encodeURIComponent((error as Error).message || 'OAuth not configured')}`);
+    }
+  });
+  app.get('/auth/github', (req, res) => {
+    try {
+      startOAuth('github', req, res);
+    } catch (error) {
+      res.redirect(`${config.oauth.webRedirect}/auth/callback?error=${encodeURIComponent((error as Error).message || 'OAuth not configured')}`);
+    }
+  });
+  app.get('/auth/google/callback', (req, res) => handleOAuthCallback('google', req, res));
+  app.get('/auth/github/callback', (req, res) => handleOAuthCallback('github', req, res));
 
   // Upload endpoint - authenticated, rate-limited, memory storage + Cloudinary
   app.post('/upload', uploadLimiter, (req, res) => {

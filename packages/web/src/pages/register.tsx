@@ -2,107 +2,208 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { Card } from '@/components/ui/Card';
+import { RegisterSchema } from '@social/shared';
+import { AuthLayout } from '@/components/auth/AuthLayout';
+import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
+import { TextField, PasswordField } from '@/components/auth/Field';
 import { Button } from '@/components/ui/Button';
 import { Icons } from '@/components/icons';
+import { cn } from '@/utils/cn';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+const FEATURES = [
+  {
+    icon: <Icons.Layers className="h-4 w-4" />,
+    title: 'Unified experience',
+    description: 'One account for posts, messaging and more',
+  },
+  {
+    icon: <Icons.Zap className="h-4 w-4" />,
+    title: 'Smart recommendations',
+    description: 'RL-powered posts and people picked for you',
+  },
+  {
+    icon: <Icons.Check className="h-4 w-4" />,
+    title: 'Free forever',
+    description: 'No paywalls. Your voice, your space',
+  },
+];
+
+function passwordScore(password: string): number {
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
+  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+  if (/[0-9]/.test(password)) score += 1;
+  if (/[^A-Za-z0-9]/.test(password)) score += 1;
+  return score;
+}
+
+const STRENGTH_LABELS = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong'];
+const STRENGTH_COLORS = [
+  'bg-red-500',
+  'bg-orange-500',
+  'bg-yellow-500',
+  'bg-lime-500',
+  'bg-emerald-500',
+];
+
 export default function RegisterPage() {
   const [formData, setFormData] = useState({ username: '', email: '', password: '', displayName: '' });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const score = passwordScore(formData.password);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFieldErrors({ ...fieldErrors, [e.target.name]: '' });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
+    e.preventDefault();
+    setFieldErrors({});
+    setLoading(true);
+
+    const parsed = RegisterSchema.safeParse(formData);
+    if (!parsed.success) {
+      setLoading(false);
+      const errors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const field = String(issue.path[0]);
+        if (!errors[field]) errors[field] = issue.message;
+      }
+      setFieldErrors(errors);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/graphql`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: `mutation Register($username:String!,$email:String!,$password:String!,$displayName:String!){register(username:$username,email:$email,password:$password,displayName:$displayName){token user{id username displayName email}}}`, variables: formData }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `mutation Register($username:String!,$email:String!,$password:String!,$displayName:String!){register(username:$username,email:$email,password:$password,displayName:$displayName){token user{id username displayName email avatarUrl}}}`,
+          variables: formData,
+        }),
       });
       const { data, errors } = await response.json();
       if (errors) toast.error(errors[0]?.message || 'Registration failed');
-      else if (data?.register) { login(data.register.token, data.register.user); toast.success('Account created!'); }
-    } catch { toast.error('Failed to connect'); } finally { setLoading(false); }
+      else if (data?.register) {
+        login(data.register.token, data.register.user);
+        toast.success('Account created!');
+      }
+    } catch {
+      toast.error('Failed to connect');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex min-h-screen bg-app-bg">
-      <div className="relative hidden w-1/2 items-center justify-center overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-violet-800 lg:flex">
-        <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_center,white_2px,transparent_2px)] [background-size:48px_48px]" />
-        <div className="relative z-10 px-12 text-center">
-          <motion.div
-            initial={{ scale: 0, rotate: -12 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-            className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[1.75rem] bg-white/15 shadow-2xl backdrop-blur-md"
-          >
-            <Icons.ForYou className="h-12 w-12 text-white" />
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4 font-display text-5xl font-bold tracking-tight text-white"
-          >
-            Join SocialApp
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-white/80"
-          >
-            Create your account and start connecting
-          </motion.p>
-        </div>
-      </div>
+    <AuthLayout
+      title="Create your account"
+      subtitle="Join the community in under a minute"
+      heroTitle="Join the social revolution"
+      heroSubtitle="One account for a real-time feed, trending topics, private messaging and smarter recommendations."
+      features={FEATURES}
+      footer={
+        <p className="text-center text-xs text-muted">
+          By signing up you agree to be awesome. No spam, ever.
+        </p>
+      }
+    >
+      <SocialAuthButtons />
 
-      <div className="flex flex-1 items-center justify-center p-8">
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="w-full max-w-md"
-        >
-          <Card className="p-8">
-            <h2 className="mb-2 font-display text-2xl font-bold tracking-tight text-ink">Create Account</h2>
-            <p className="mb-8 text-muted">Fill in the details to get started</p>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="username" className="mb-2 block text-sm font-medium text-ink">Username</label>
-                  <input id="username" type="text" name="username" required value={formData.username} onChange={handleChange} className="input-premium" placeholder="johndoe" />
-                </div>
-                <div>
-                  <label htmlFor="displayName" className="mb-2 block text-sm font-medium text-ink">Display Name</label>
-                  <input id="displayName" type="text" name="displayName" required value={formData.displayName} onChange={handleChange} className="input-premium" placeholder="John Doe" />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="register-email" className="mb-2 block text-sm font-medium text-ink">Email</label>
-                <input id="register-email" type="email" name="email" required value={formData.email} onChange={handleChange} className="input-premium" placeholder="john@example.com" />
-              </div>
-              <div>
-                <label htmlFor="register-password" className="mb-2 block text-sm font-medium text-ink">Password</label>
-                <input id="register-password" type="password" name="password" required value={formData.password} onChange={handleChange} className="input-premium" placeholder="••••••••" minLength={8} />
-                <p className="mt-1.5 text-xs text-muted">Must be at least 8 characters</p>
-              </div>
-              <Button type="submit" loading={loading} size="lg" className="w-full">
-                {loading ? 'Creating...' : 'Create Account'}
-              </Button>
-            </form>
-            <p className="mt-6 text-center text-muted">
-              Already have an account?{' '}
-              <Link href="/login" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
-                Sign in
-              </Link>
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <TextField
+            id="username"
+            label="Username"
+            name="username"
+            autoComplete="username"
+            autoFocus
+            required
+            icon={<Icons.AtSign className="h-4 w-4" />}
+            placeholder="johndoe"
+            value={formData.username}
+            onChange={handleChange}
+            error={fieldErrors.username}
+            hint="3-20 chars: letters, numbers, underscores"
+          />
+          <TextField
+            id="displayName"
+            label="Display name"
+            name="displayName"
+            autoComplete="name"
+            required
+            placeholder="John Doe"
+            value={formData.displayName}
+            onChange={handleChange}
+            error={fieldErrors.displayName}
+          />
+        </div>
+
+        <TextField
+          id="register-email"
+          label="Email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          icon={<Icons.Mail className="h-4 w-4" />}
+          placeholder="john@example.com"
+          value={formData.email}
+          onChange={handleChange}
+          error={fieldErrors.email}
+        />
+
+        <PasswordField
+          id="register-password"
+          label="Password"
+          name="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          icon={<Icons.Lock className="h-4 w-4" />}
+          placeholder="••••••••"
+          value={formData.password}
+          onChange={handleChange}
+          error={fieldErrors.password}
+          hint="At least 8 characters"
+        />
+
+        {formData.password.length > 0 && (
+          <div className="-mt-2 space-y-1.5">
+            <div className="flex gap-1.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    'h-1.5 flex-1 rounded-full transition-colors duration-300',
+                    i < score ? STRENGTH_COLORS[score - 1] : 'bg-surface-2',
+                  )}
+                />
+              ))}
+            </div>
+            <p className="text-xs font-medium text-muted">
+              Strength: <span className={score > 0 ? 'text-ink' : ''}>{STRENGTH_LABELS[score - 1] ?? STRENGTH_LABELS[0]}</span>
             </p>
-          </Card>
-        </motion.div>
-      </div>
-    </div>
+          </div>
+        )}
+
+        <Button type="submit" loading={loading} size="lg" className="w-full">
+          {loading ? 'Creating account...' : 'Create account'}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-muted">
+        Already have an account?{' '}
+        <Link href="/login" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+          Sign in
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
