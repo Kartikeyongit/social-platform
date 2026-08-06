@@ -39,7 +39,7 @@ export const MobileNav: React.FC = () => {
   return (
     <>
       {/* Top Bar */}
-      <div className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-line bg-surface/80 px-4 backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-line bg-surface px-4 lg:hidden">
         <IconButton label="Menu" onClick={() => setIsOpen(true)}>
           <Icons.More className="h-6 w-6" />
         </IconButton>
@@ -176,7 +176,7 @@ export const MobileNav: React.FC = () => {
       </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
         <div className="flex items-center justify-around px-2">
           {bottomItems.map((item) => {
             const Icon = item.icon;
@@ -206,13 +206,6 @@ export const MobileNav: React.FC = () => {
                   isActive ? 'text-brand-600 dark:text-brand-400' : 'text-muted',
                 )}
               >
-                {isActive && (
-                  <motion.span
-                    layoutId="mobile-tab"
-                    transition={spring}
-                    className="absolute inset-x-1 inset-y-1 rounded-2xl bg-brand-50 dark:bg-brand-900/25"
-                  />
-                )}
                 <Icon className="relative z-10 h-6 w-6" strokeWidth={isActive ? 2.5 : 2} />
                 <span className="relative z-10 text-[10px] font-medium">{item.label}</span>
                 {item.badge && unreadCount > 0 && (
