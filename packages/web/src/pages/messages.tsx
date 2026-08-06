@@ -277,7 +277,7 @@ export default function MessagesPage() {
               {newChatOpen && (
                 <div className="mb-3">
                   <div className="relative">
-                    <Icons.Search className="absolute left-3 top-1/2 w-4 -translate-y-1/2 text-muted" />
+                    <Icons.Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                     <input
                       type="text"
                       value={searchQuery}
@@ -329,10 +329,9 @@ export default function MessagesPage() {
 
               <button
                 onClick={() => setNewChatOpen((o) => !o)}
-                className="flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-surface-2"
+                className="flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-surface-2"
               >
-                <span>Conversations</span>
-                <Icons.More className="h-4 w-4 text-muted" />
+                Conversations
               </button>
             </div>
 

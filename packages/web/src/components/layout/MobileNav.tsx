@@ -74,7 +74,7 @@ export const MobileNav: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: -320 }}
               transition={spring}
-              className="fixed bottom-0 left-0 top-0 z-50 w-80 overflow-y-auto border-r border-line bg-surface shadow-2xl lg:hidden"
+              className="fixed bottom-0 left-0 top-0 z-50 w-80 overflow-y-auto border-r border-line bg-surface shadow-2xl scrollbar-hide lg:hidden"
             >
               <div className="flex items-center justify-between px-6 pb-4 pt-7">
                 <Link href="/home" onClick={() => setIsOpen(false)} className="flex items-center gap-2">

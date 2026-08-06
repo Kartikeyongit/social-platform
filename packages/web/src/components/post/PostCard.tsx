@@ -231,7 +231,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, variant = 'list', onCo
           )}
 
           {/* Actions */}
-          <div className="mt-4 flex max-w-md items-center gap-6">
+          <div className="mt-4 flex w-full items-center gap-6">
             <motion.button
               whileTap={{ scale: 0.85 }}
               onClick={handleLike}

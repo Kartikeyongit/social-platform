@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, gql } from '@apollo/client';
-import { TrendingSidebar } from '@/components/home/TrendingSidebar';
 import { CreatePost } from '@/components/post/CreatePost';
 import { PostCard } from '@/components/post/PostCard';
 import { CommentSection } from '@/components/post/CommentSection';
@@ -111,8 +110,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative">
-      <div className="mx-auto w-full max-w-2xl space-y-2">
+    <div className="mx-auto w-full max-w-2xl space-y-2">
         <CreatePost onPosted={handlePosted} />
 
         {loading && allPosts.length === 0 && (
@@ -161,10 +159,6 @@ export default function HomePage() {
           {isLoadingMore && <div className="mb-2 h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />}
           {!hasMore && allPosts.length > 0 && <CaughtUp className="py-0" />}
         </div>
-      </div>
-      <div className="absolute right-0 top-0 hidden w-80 min-[1400px]:block">
-        <div className="sticky top-0 space-y-4"><TrendingSidebar /></div>
-      </div>
     </div>
   );
 }

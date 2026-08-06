@@ -8,7 +8,7 @@ import { useRouter } from 'next/router';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { fadeUp } from '@/utils/motion';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -55,10 +55,12 @@ export default function EditProfilePage() {
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-6">
-      <motion.div variants={fadeUp} initial="hidden" animate="visible">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Edit Profile</h1>
-        <p className="mt-1 text-muted">Update your profile information</p>
-      </motion.div>
+      <PageHeader
+        back
+        onBack={() => router.back()}
+        title="Edit Profile"
+        subtitle="Update your profile information"
+      />
       <form onSubmit={handleSubmit}>
         <Card className="space-y-6 p-6">
           <div className="flex items-center gap-4">
