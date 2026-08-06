@@ -7,7 +7,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 export const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-brand-600 text-white hover:bg-brand-700 hover:shadow-glow active:bg-brand-800',
   secondary:
-    'bg-surface text-ink border border-line hover:border-brand-400 hover:text-brand-600 hover:bg-surface-2',
+    'bg-surface text-ink border border-line hover:bg-surface-2 hover:text-brand-600',
   ghost: 'text-muted hover:bg-surface-2 hover:text-ink',
   danger: 'bg-red-600 text-white hover:bg-red-700',
 };
@@ -25,7 +25,6 @@ export function buttonClass(
 ) {
   return cn(
     'relative inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 active:scale-95',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60',
     'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
     BUTTON_VARIANTS[variant],
     BUTTON_SIZES[size],
@@ -79,7 +78,6 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       aria-label={label}
       className={cn(
         'relative inline-flex flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 active:scale-90',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60',
         'disabled:cursor-not-allowed disabled:opacity-50',
         BUTTON_VARIANTS[variant],
         ICON_SIZES[size],

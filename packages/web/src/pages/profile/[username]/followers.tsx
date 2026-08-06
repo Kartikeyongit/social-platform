@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button, buttonClass } from '@/components/ui/Button';
 import { ListSkeleton } from '@/components/ui/Skeleton';
+import { useAuth } from '@/contexts/AuthContext';
 
 const GET_FOLLOW_DATA = gql`
   query GetFollowData($username: String!) {
@@ -44,8 +45,11 @@ const REMOVE_FOLLOWER = gql`
 
 export default function FollowersPage() {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const { username, tab } = router.query;
   const [activeTab, setActiveTab] = useState<'followers' | 'following'>('followers');
+
+  const isOwnPage = !!currentUser && !!username && currentUser.username === username;
 
   useEffect(() => {
     setActiveTab(tab === 'following' ? 'following' : 'followers');
@@ -136,19 +140,23 @@ export default function FollowersPage() {
                   bio: person.bio,
                 }}
                 action={
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      if (activeTab === 'followers') {
-                        removeFollower({ variables: { followerId: person.id } });
-                      } else {
-                        unfollowUser({ variables: { userId: person.id } });
-                      }
-                    }}
-                  >
-                    {activeTab === 'followers' ? 'Remove' : 'Unfollow'}
-                  </Button>
+                  isOwnPage ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        if (activeTab === 'followers') {
+                          removeFollower({ variables: { followerId: person.id } });
+                        } else {
+                          unfollowUser({ variables: { userId: person.id } });
+                        }
+                      }}
+                    >
+                      {activeTab === 'followers' ? 'Remove' : 'Unfollow'}
+                    </Button>
+                  ) : (
+                    null
+                  )
                 }
               />
             ))}

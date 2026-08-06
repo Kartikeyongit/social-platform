@@ -36,6 +36,14 @@ function clampLimit(limit: any, def = 20, max = 50): number {
   return Math.min(Math.floor(n), max);
 }
 
+async function areMutualConnections(a: string, b: string): Promise<boolean> {
+  const [aFollowsB, bFollowsA] = await Promise.all([
+    prisma.follow.findUnique({ where: { followerId_followingId: { followerId: a, followingId: b } }, select: { followerId: true } }),
+    prisma.follow.findUnique({ where: { followerId_followingId: { followerId: b, followingId: a } }, select: { followerId: true } }),
+  ]);
+  return !!aFollowsB && !!bFollowsA;
+}
+
 interface Cursor {
   createdAt: Date;
   id?: string;
@@ -347,9 +355,13 @@ export const resolvers = {
       });
     },
 
-    followers: async (_: any, { username }: { username: string }) => {
+    followers: async (_: any, { username }: { username: string }, { userId }: Context) => {
+      if (!userId) throw new GraphQLError('Not authenticated');
       const user = await prisma.user.findUnique({ where: { username } });
       if (!user) throw new GraphQLError('User not found');
+      if (userId !== user.id && !(await areMutualConnections(userId, user.id))) {
+        throw new GraphQLError('You can only view connections of mutual followers');
+      }
       const followers = await prisma.follow.findMany({
         where: { followingId: user.id },
         include: { follower: true },
@@ -357,9 +369,13 @@ export const resolvers = {
       return followers.map(f => f.follower);
     },
 
-    following: async (_: any, { username }: { username: string }) => {
+    following: async (_: any, { username }: { username: string }, { userId }: Context) => {
+      if (!userId) throw new GraphQLError('Not authenticated');
       const user = await prisma.user.findUnique({ where: { username } });
       if (!user) throw new GraphQLError('User not found');
+      if (userId !== user.id && !(await areMutualConnections(userId, user.id))) {
+        throw new GraphQLError('You can only view connections between mutual followers');
+      }
       const following = await prisma.follow.findMany({
         where: { followerId: user.id },
         include: { following: true },

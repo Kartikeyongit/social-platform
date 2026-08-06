@@ -210,7 +210,7 @@ export const MobileNav: React.FC = () => {
                   <motion.span
                     layoutId="mobile-tab"
                     transition={spring}
-                    className="absolute inset-0 rounded-2xl bg-brand-50 dark:bg-brand-900/25"
+                    className="absolute inset-x-1 inset-y-1 rounded-2xl bg-brand-50 dark:bg-brand-900/25"
                   />
                 )}
                 <Icon className="relative z-10 h-6 w-6" strokeWidth={isActive ? 2.5 : 2} />

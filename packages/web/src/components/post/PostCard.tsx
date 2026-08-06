@@ -158,7 +158,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, variant = 'list', onCo
       <Link
         href={postHref}
         aria-label={`View post by ${post.author.displayName}`}
-        className="absolute inset-0 z-10 rounded-[inherit] focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none"
+        className="absolute inset-0 z-10 rounded-[inherit] focus-visible:outline-none"
       />
 
       <div className="relative z-20 flex gap-3">

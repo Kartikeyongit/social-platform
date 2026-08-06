@@ -38,7 +38,3 @@
     scroll-behavior: auto !important;
   }
 }
-
-:where(button, a, input, textarea, select, [role='tab']) {
-  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/70 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-surface;
-}
