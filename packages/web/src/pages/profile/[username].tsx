@@ -207,29 +207,40 @@ export default function ProfilePage() {
                 <span>Edit Profile</span>
               </Link>
             ) : (
-              <motion.button
-                layout
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleFollow}
-                disabled={followLoading}
-                className={profileUser.isFollowing ? 'btn-secondary-premium' : 'btn-primary-premium'}
-              >
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={followLoading ? 'loading' : (profileUser.isFollowing ? 'unfollow' : 'follow')}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex items-center space-x-2"
+              <div className="flex items-center space-x-3">
+                <motion.button
+                  layout
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                  className={profileUser.isFollowing ? 'btn-secondary-premium' : 'btn-primary-premium'}
+                >
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={followLoading ? 'loading' : (profileUser.isFollowing ? 'unfollow' : 'follow')}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      className="flex items-center space-x-2"
+                    >
+                      {followLoading ? (
+                        <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /><span>Processing</span></>
+                      ) : profileUser.isFollowing ? 'Unfollow' : 'Follow'}
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Link
+                    href={`/messages?user=${profileUser.username}`}
+                    className="inline-flex items-center space-x-2 px-5 py-2.5 bg-white dark:bg-dark-50 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-full font-medium text-sm hover:border-brand-500 hover:text-brand-600 dark:hover:border-brand-500 dark:hover:text-brand-400 transition-all shadow-sm"
                   >
-                    {followLoading ? (
-                      <><span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /><span>Processing</span></>
-                    ) : profileUser.isFollowing ? 'Unfollow' : 'Follow'}
-                  </motion.span>
-                </AnimatePresence>
-              </motion.button>
+                    <Icons.Send className="w-4 h-4" />
+                    <span>Message</span>
+                  </Link>
+                </motion.div>
+              </div>
             )}
           </div>
         </div>

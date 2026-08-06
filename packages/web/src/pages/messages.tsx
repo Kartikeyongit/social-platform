@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useSubscription, gql } from '@apollo/client';
+import { useQuery, useMutation, useLazyQuery, useSubscription, gql } from '@apollo/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 const GET_CONVERSATIONS = gql`
   query GetConversations($limit: Int) {
@@ -67,13 +68,35 @@ const NEW_MESSAGE_SUB = gql`
   }
 `;
 
+const SEARCH_USERS = gql`
+  query SearchUsers($query: String!, $limit: Int) {
+    searchUsers(query: $query, limit: $limit) {
+      id username displayName avatarUrl bio
+    }
+  }
+`;
+
+const GET_USER = gql`
+  query GetUserByUsername($username: String!) {
+    user(username: $username) {
+      id username displayName avatarUrl bio
+    }
+  }
+`;
+
 const CONVERSATIONS_LIMIT = 50;
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [messageInput, setMessageInput] = useState('');
   const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -93,6 +116,44 @@ export default function MessagesPage() {
   });
 
   const [markConversationRead] = useMutation(MARK_CONVERSATION_READ);
+
+  const [getSearchUsers] = useLazyQuery(SEARCH_USERS, {
+    onCompleted: (d) => { setSearchLoading(false); setSearchError(null); setSearchResults(d?.searchUsers || []); },
+    onError: (e) => { setSearchLoading(false); setSearchError(e); },
+  });
+
+  const [getUserByUsername] = useLazyQuery(GET_USER, {
+    onCompleted: (d) => {
+      if (d?.user) {
+        setSelectedUser(d.user);
+        setNewChatOpen(false);
+        router.replace('/messages', undefined, { shallow: true });
+      }
+    },
+  });
+
+  // Debounced user search for the "New message" panel
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) { setSearchResults([]); setSearchLoading(false); return; }
+    setSearchLoading(true);
+    const t = setTimeout(() => getSearchUsers({ variables: { query: q, limit: 20 } }), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Deep-link: /messages?user=<username> preselects the conversation partner
+  useEffect(() => {
+    const username = typeof router.query.user === 'string' ? router.query.user : '';
+    if (!username || username === user?.username) return;
+    getUserByUsername({ variables: { username } });
+  }, [router.query.user, user?.username]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectSearchUser = (target: any) => {
+    setSelectedUser(target);
+    setNewChatOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
 
   useSubscription(NEW_MESSAGE_SUB, {
     onData: ({ client, data }) => {
@@ -169,8 +230,73 @@ export default function MessagesPage() {
       <div className="bg-white dark:bg-dark-50 rounded-3xl border border-slate-200/60 dark:border-dark-100 shadow-soft flex flex-col md:flex-row md:h-[644px] h-auto overflow-hidden">
         {/* Conversations List */}
         <div className="w-full md:w-80 md:border-r border-b md:border-b-0 border-slate-200 dark:border-dark-100 flex flex-col flex-shrink-0">
-          <div className="p-4 border-b border-slate-200 dark:border-dark-100">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">Conversations</p>
+          <div className="p-4 border-b border-slate-200 dark:border-dark-100 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">Conversations</p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setNewChatOpen(o => !o)}
+                aria-label="New message"
+                className="flex items-center space-x-1.5 rounded-full px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition-colors shadow-md"
+              >
+                <Icons.Send className="w-3.5 h-3.5" />
+                <span>New</span>
+              </motion.button>
+            </div>
+
+            {newChatOpen && (
+              <div className="mt-3">
+                <div className="relative">
+                  <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search people..."
+                    className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-dark-50 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white placeholder:text-slate-400"
+                  />
+                </div>
+                <div className="mt-2 max-h-56 overflow-y-auto scrollbar-hide">
+                  {searchError && (
+                    <p className="text-xs text-red-500 px-2 py-1">{searchError.message}</p>
+                  )}
+                  {searchLoading && searchQuery.trim() && (
+                    <div className="p-2 space-y-1">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex items-center space-x-3 p-2 animate-pulse">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-dark-100" />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="h-3 bg-slate-200 dark:bg-dark-100 rounded-full w-24" />
+                            <div className="h-2.5 bg-slate-200 dark:bg-dark-100 rounded-full w-16" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!searchLoading && !searchQuery.trim() && (
+                    <p className="text-xs text-slate-400 px-2 py-1">Type a name or username to find people</p>
+                  )}
+                  {!searchLoading && searchQuery.trim() && searchResults.length === 0 && (
+                    <p className="text-xs text-slate-400 px-2 py-1">No people found</p>
+                  )}
+                  {searchResults
+                    .filter((u: any) => u.id !== user?.id)
+                    .map((u: any) => (
+                      <div key={u.id} onClick={() => selectSearchUser(u)}
+                        className="flex items-center space-x-3 p-2 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-dark-50 transition-colors">
+                        {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" /> :
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">{u.displayName.charAt(0).toUpperCase()}</div>}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-slate-900 dark:text-white truncate">{u.displayName}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{u.username}</p>
+                        </div>
+                        <span className="flex-shrink-0 rounded-full px-3 py-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold">Message</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="overflow-y-auto flex-1 scrollbar-hide max-h-64 md:max-h-none">
             {convLoading ? (
