@@ -14,6 +14,11 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const GET_FOLLOW_DATA = gql`
   query GetFollowData($username: String!) {
+    user(username: $username) {
+      id
+      isFollowing
+      followsViewer
+    }
     followers(username: $username) {
       id
       username
@@ -78,6 +83,7 @@ export default function FollowersPage() {
   const followers = data?.followers || [];
   const following = data?.following || [];
   const currentList = activeTab === 'followers' ? followers : following;
+  const canView = isOwnPage || (Boolean(data?.user?.isFollowing) && Boolean(data?.user?.followsViewer));
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-6">
@@ -95,11 +101,11 @@ export default function FollowersPage() {
             key={t}
             role="tab"
             aria-selected={activeTab === t}
+            disabled={!canView}
             onClick={() => switchTab(t)}
             className={
-              activeTab === t
-                ? buttonClass('primary', 'md')
-                : buttonClass('secondary', 'md')
+              (activeTab === t ? buttonClass('primary', 'md') : buttonClass('secondary', 'md')) +
+              ' disabled:cursor-not-allowed disabled:opacity-50'
             }
           >
             {t === 'followers' ? 'Followers' : 'Following'}
@@ -116,7 +122,13 @@ export default function FollowersPage() {
         />
       )}
 
-      {loading ? (
+      {!canView ? (
+        <EmptyState
+          icon={<Icons.Alert className="h-8 w-8" />}
+          title="Connections are private"
+          description="Only mutual connections can view followers and following"
+        />
+      ) : loading ? (
         <Card className="p-2">
           <ListSkeleton rows={5} />
         </Card>

@@ -29,6 +29,7 @@ const GET_USER = gql`
       followingCount
       postCount
       isFollowing
+      followsViewer
       createdAt
     }
     userPosts(username: $username, limit: 20) {
@@ -136,6 +137,23 @@ export default function ProfilePage() {
   }
 
   const isOwnProfile = currentUser?.id === profileUser.id;
+  const canViewConnections = isOwnProfile || (profileUser.isFollowing && Boolean(profileUser.followsViewer));
+
+  const connectionStat = (count: number | undefined, label: string, href: string) => (
+    canViewConnections ? (
+      <Link href={href} className="group text-center" onClick={(e) => e.stopPropagation()}>
+        <p className="font-bold tabular-nums text-ink group-hover:text-brand-600 dark:group-hover:text-brand-400">
+          {count}
+        </p>
+        <p className="text-xs text-muted">{label}</p>
+      </Link>
+    ) : (
+      <div className="text-center">
+        <p className="font-bold tabular-nums text-ink/60">{count}</p>
+        <p className="text-xs text-muted">{label}</p>
+      </div>
+    )
+  );
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -160,32 +178,14 @@ export default function ProfilePage() {
                   <p className="mt-2 text-sm leading-relaxed text-ink/80">{profileUser.bio}</p>
                 )}
 
-                <div className="mt-4 flex gap-5">
-                  <div className="text-center">
-                    <p className="font-bold tabular-nums text-ink">{profileUser.postCount}</p>
-                    <p className="text-xs text-muted">Posts</p>
+                  <div className="mt-4 flex gap-5">
+                    <div className="text-center">
+                      <p className="font-bold tabular-nums text-ink">{profileUser.postCount}</p>
+                      <p className="text-xs text-muted">Posts</p>
+                    </div>
+                    {connectionStat(profileUser.followerCount, 'Followers', `/profile/${profileUser.username}/followers`)}
+                    {connectionStat(profileUser.followingCount, 'Following', `/profile/${profileUser.username}/followers?tab=following`)}
                   </div>
-                  <Link
-                    href={`/profile/${profileUser.username}/followers`}
-                    className="group text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <p className="font-bold tabular-nums text-ink group-hover:text-brand-600 dark:group-hover:text-brand-400">
-                      {profileUser.followerCount}
-                    </p>
-                    <p className="text-xs text-muted">Followers</p>
-                  </Link>
-                  <Link
-                    href={`/profile/${profileUser.username}/followers?tab=following`}
-                    className="group text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <p className="font-bold tabular-nums text-ink group-hover:text-brand-600 dark:group-hover:text-brand-400">
-                      {profileUser.followingCount}
-                    </p>
-                    <p className="text-xs text-muted">Following</p>
-                  </Link>
-                </div>
 
                 <p className="mt-3 text-xs text-muted">
                   Joined {formatDistanceToNow(new Date(profileUser.createdAt), { addSuffix: true })}

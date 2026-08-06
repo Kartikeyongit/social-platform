@@ -10,10 +10,10 @@
 
 @layer components {
   .input-premium {
-    @apply w-full px-4 py-3 bg-surface-2 backdrop-blur-sm border-2 border-line
+    @apply w-full px-4 py-3 bg-surface-2 border-2 border-line
            rounded-2xl text-sm placeholder:text-muted text-ink
-           focus:outline-none focus:bg-surface
-           transition-all duration-200;
+           focus:outline-none
+           transition-colors duration-200;
   }
 
   .tag-premium {

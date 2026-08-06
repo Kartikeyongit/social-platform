@@ -12,6 +12,7 @@ export const typeDefs = `#graphql
     followingCount: Int!
     postCount: Int!
     isFollowing: Boolean!
+    followsViewer: Boolean!
     createdAt: DateTime!
   }
 
