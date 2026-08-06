@@ -130,7 +130,7 @@ export default function ProfilePage() {
         <Card className="p-12 text-center">
           <UserX className="mx-auto mb-4 h-16 w-16 text-muted" />
           <h2 className="mb-2 text-xl font-bold text-ink">User not found</h2>
-          <p className="text-muted">The user @{username} doesn't exist</p>
+          <p className="text-muted">The user @{username} doesn&apos;t exist</p>
         </Card>
       </div>
     );
