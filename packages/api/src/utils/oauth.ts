@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { prisma } from './db';
 import { config } from './config';
 import { signToken } from './auth';
+import { uniqueUsername } from './username';
 
 const STATE_COOKIE = 'oauth_state';
 
@@ -190,12 +191,7 @@ async function upsertOAuthUser(profile: OAuthProfile): Promise<{ userId: string;
   if (existing) return { userId: existing.id, isNewUser: false };
 
   let baseUsername = slugify(profile.username || profile.displayName || 'user');
-  let username = baseUsername;
-  let suffix = 0;
-  while (await prisma.user.findUnique({ where: { username } })) {
-    suffix += 1;
-    username = `${baseUsername}${suffix}`;
-  }
+  const username = await uniqueUsername(prisma, baseUsername);
 
   const email = profile.email?.trim().toLowerCase();
 

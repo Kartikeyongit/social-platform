@@ -5,12 +5,14 @@ import {
   RegisterSchema,
   LoginSchema,
   UpdateProfileSchema,
+  ChangePasswordSchema,
   CreatePostSchema,
   CreateCommentSchema,
   SendMessageSchema,
 } from '@social/shared';
 import { suggestHashtags } from '../../utils/aiSuggestions';
 import { signToken } from '../../utils/auth';
+import { isUsernameAvailable } from '../../utils/username';
 import { prisma } from '../../utils/db';
 import { createLoaders, Loaders } from '../../utils/loaders';
 import { pubsub, notificationTopic, messageTopic } from '../../utils/pubsub';
@@ -89,6 +91,10 @@ export const resolvers = {
     
     user: async (_: any, { username }: { username: string }) => {
       return prisma.user.findUnique({ where: { username } });
+    },
+
+    usernameAvailable: async (_: any, { username }: { username: string }) => {
+      return isUsernameAvailable(prisma, username);
     },
     
     post: async (_: any, { id }: { id: string }) => {
@@ -375,6 +381,9 @@ export const resolvers = {
         where: { OR: [{ email: input.email }, { username: input.username }] },
       });
       if (existingUser) throw new GraphQLError('Email or username already exists');
+      if (!(await isUsernameAvailable(prisma, input.username))) {
+        throw new GraphQLError('Username already exists');
+      }
       const passwordHash = await bcrypt.hash(input.password, 10);
       let user;
       try {
@@ -403,14 +412,77 @@ export const resolvers = {
     updateProfile: async (_: any, { input }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');
       const data = validate(UpdateProfileSchema, input);
-      return prisma.user.update({
-        where: { id: userId },
-        data: {
-          ...(data.displayName && data.displayName.trim() ? { displayName: data.displayName } : {}),
-          ...(data.bio !== undefined ? { bio: data.bio } : {}),
-          ...(data.avatarUrl ? { avatarUrl: data.avatarUrl } : {}),
-        },
+      const current = await prisma.user.findUnique({ where: { id: userId } });
+      if (!current) throw new GraphQLError('User not found');
+
+      let newUsername;
+      if (data.username && data.username.trim()) {
+        newUsername = data.username.trim();
+        if (newUsername.toLowerCase() !== current.username.toLowerCase()) {
+          if (!(await isUsernameAvailable(prisma, newUsername, userId))) {
+            throw new GraphQLError('Username is already taken');
+          }
+        }
+      }
+
+      try {
+        return await prisma.user.update({
+          where: { id: userId },
+          data: {
+            ...(newUsername ? { username: newUsername } : {}),
+            ...(data.displayName && data.displayName.trim() ? { displayName: data.displayName } : {}),
+            ...(data.bio !== undefined ? { bio: data.bio } : {}),
+            ...(data.avatarUrl ? { avatarUrl: data.avatarUrl } : {}),
+          },
+        });
+      } catch (error: any) {
+        // Race: another request claimed the username just now
+        if (error?.code === 'P2002') throw new GraphQLError('Username is already taken');
+        throw error;
+      }
+    },
+
+    changePassword: async (_: any, { currentPassword, newPassword }: any, { userId }: Context) => {
+      if (!userId) throw new GraphQLError('Not authenticated');
+      const data = validate(ChangePasswordSchema, { currentPassword, newPassword });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new GraphQLError('User not found');
+      if (!user.passwordHash) {
+        throw new GraphQLError('No password set on this account; sign in with your OAuth provider instead');
+      }
+      const valid = await bcrypt.compare(data.currentPassword, user.passwordHash);
+      if (!valid) throw new GraphQLError('Current password is incorrect');
+      const passwordHash = await bcrypt.hash(data.newPassword, 10);
+      await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+      return true;
+    },
+
+    deleteAccount: async (_: any, { password }: any, { userId }: Context) => {
+      if (!userId) throw new GraphQLError('Not authenticated');
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) throw new GraphQLError('User not found');
+      if (user.passwordHash) {
+        if (!password) throw new GraphQLError('Current password is required');
+        const valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) throw new GraphQLError('Current password is incorrect');
+      }
+      // Best-effort cleanup: cascade delete otherwise leaves hashtag counts stale
+      const hashtagPosts = await prisma.post.findMany({
+        where: { authorId: userId },
+        select: { hashtags: true },
       });
+      await prisma.$transaction(async (tx) => {
+        for (const post of hashtagPosts) {
+          for (const tag of post.hashtags) {
+            await tx.hashtag.updateMany({
+              where: { name: tag, postCount: { gt: 0 } },
+              data: { postCount: { decrement: 1 } },
+            });
+          }
+        }
+        await tx.user.delete({ where: { id: userId } });
+      });
+      return true;
     },
     
     createPost: async (_: any, { input }: any, { userId }: Context) => {
@@ -621,6 +693,7 @@ export const resolvers = {
       if (!userId || parent.id !== userId) return null;
       return parent.email;
     },
+    hasPassword: (parent: any) => !!parent.passwordHash,
     followerCount: (parent: any, _: any, { loaders }: Context) =>
       loaders.followerCountLoader.load(parent.id),
     followingCount: (parent: any, _: any, { loaders }: Context) =>

@@ -48,7 +48,7 @@ async function startServer() {
   }));
 
   const uploadLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
-  const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
+  const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: parseInt(process.env.API_RATE_LIMIT_MAX || '120', 10) || 120, standardHeaders: true, legacyHeaders: false });
 
   const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql' });
   const schema = makeExecutableSchema({ typeDefs, resolvers });

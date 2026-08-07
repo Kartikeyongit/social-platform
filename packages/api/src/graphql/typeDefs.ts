@@ -8,6 +8,7 @@ export const typeDefs = `#graphql
     displayName: String!
     avatarUrl: String
     bio: String
+    hasPassword: Boolean!
     followerCount: Int!
     followingCount: Int!
     postCount: Int!
@@ -123,6 +124,7 @@ export const typeDefs = `#graphql
   }
 
   input UpdateProfileInput {
+    username: String
     displayName: String
     bio: String
     avatarUrl: String
@@ -131,6 +133,7 @@ export const typeDefs = `#graphql
   type Query {
     me: User
     user(username: String!): User
+    usernameAvailable(username: String!): Boolean!
     post(id: ID!): Post
     
     # Feed
@@ -171,6 +174,10 @@ export const typeDefs = `#graphql
     
     # Profile
     updateProfile(input: UpdateProfileInput!): User!
+
+    # Account
+    changePassword(currentPassword: String!, newPassword: String!): Boolean!
+    deleteAccount(password: String): Boolean!
     
     # Posts
     createPost(input: CreatePostInput!): Post!

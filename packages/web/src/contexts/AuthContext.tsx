@@ -9,6 +9,7 @@ interface User {
   email: string;
   avatarUrl?: string;
   bio?: string;
+  hasPassword?: boolean;
 }
 
 interface AuthContextType {
@@ -42,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await fetch(`${API_URL}/graphql`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ query: `query Me { me { id username displayName email avatarUrl bio } }` }),
+        body: JSON.stringify({ query: `query Me { me { id username displayName email avatarUrl bio hasPassword } }` }),
       });
       const { data } = await response.json();
       if (data?.me) setUser(data.me);

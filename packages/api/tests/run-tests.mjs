@@ -13,8 +13,8 @@ const distEntry = path.join(apiRoot, 'dist', 'index.js');
 const PORT = process.env.PORT || '4000';
 const API_URL = `http://localhost:${PORT}/graphql`;
 
-const TEST_USER_PREFIXES = ['inua_', 'inub_', 'suba_', 'subb_', 'subc_', 'perfu_'];
-const TEST_ONLY_HASHTAGS = ['integritytest'];
+const TEST_USER_PREFIXES = ['inua_', 'inub_', 'inuc_', 'suba_', 'subb_', 'subc_', 'perfu_'];
+const TEST_ONLY_HASHTAGS = ['integritytest', 'deltag'];
 
 const SUITES = [
   ['integrity', ['integrity.test.mjs']],
@@ -102,7 +102,7 @@ console.log(`Starting API server on :${PORT} ...`);
 const server = spawn(process.execPath, [distEntry], {
   cwd: apiRoot,
   stdio: ['ignore', 'inherit', 'inherit'],
-  env: { ...process.env, PORT },
+  env: { ...process.env, PORT, API_RATE_LIMIT_MAX: '5000' },
 });
 
 let failedSuites = 0;

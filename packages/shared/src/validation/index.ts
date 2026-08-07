@@ -16,8 +16,10 @@ export const SendMessageSchema = z.object({
   content: z.string().min(1).max(1000),
 });
 
+export const UsernameSchema = z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/);
+
 export const RegisterSchema = z.object({
-  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
+  username: UsernameSchema,
   email: z.string().email(),
   password: z.string().min(8).max(100),
   displayName: z.string().min(2).max(50),
@@ -29,9 +31,15 @@ export const LoginSchema = z.object({
 });
 
 export const UpdateProfileSchema = z.object({
+  username: UsernameSchema.optional(),
   displayName: z.string().max(50).optional(),
   bio: z.string().max(200).nullable().optional(),
   avatarUrl: z.string().url().or(z.literal('')).optional(),
+});
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(100),
 });
 
 export type CreatePostInput = z.infer<typeof CreatePostSchema>;
@@ -40,3 +48,4 @@ export type SendMessageInput = z.infer<typeof SendMessageSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

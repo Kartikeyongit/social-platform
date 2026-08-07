@@ -52,7 +52,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `mutation Login($email: String!, $password: String!) { login(email: $email, password: $password) { token user { id username displayName email avatarUrl } } }`,
+          query: `mutation Login($email: String!, $password: String!) { login(email: $email, password: $password) { token user { id username displayName email avatarUrl hasPassword } } }`,
           variables: { email, password },
         }),
       });

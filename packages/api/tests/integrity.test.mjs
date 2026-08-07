@@ -146,6 +146,71 @@ async function main() {
   try { await gql(`query Q($q:String!){searchUsers(query:$q){username}}`, { q: '' }, tokenA); } catch { searchErr = true; }
   check('empty search rejected', searchErr);
 
+  // --- Account management: username availability + rename ---
+  const uC = `inuc_${ts}`;
+  const { register: rc } = await gql(
+    `mutation R($username:String!,$email:String!,$password:String!,$displayName:String!){register(username:$username,email:$email,password:$password,displayName:$displayName){token user{id username email hasPassword}}}`,
+    { username: uC, email: `${uC}@test.com`, password: 'password123', displayName: 'Integ C' });
+  const tokenC = rc.token;
+  const userCId = rc.user.id;
+  check('register returns hasPassword=true', rc.user.hasPassword === true, JSON.stringify(rc.user));
+
+  const availFree = await gql(`query A($u:String!){usernameAvailable(username:$u)}`, { u: `fresh_${ts}` }, tokenC);
+  const availTaken = await gql(`query A($u:String!){usernameAvailable(username:$u)}`, { u: uA }, tokenC);
+  const availTakenCase = await gql(`query A($u:String!){usernameAvailable(username:$u)}`, { u: uA.toUpperCase() }, tokenC);
+  check('usernameAvailable: free handle true', availFree.usernameAvailable === true);
+  check('usernameAvailable: taken handle false', availTaken.usernameAvailable === false);
+  check('usernameAvailable: case-variant taken false', availTakenCase.usernameAvailable === false);
+
+  const newHandle = `inuc2_${ts}`;
+  const { updateProfile: renamed } = await gql(
+    `mutation U($input:UpdateProfileInput!){updateProfile(input:$input){id username}}`,
+    { input: { username: newHandle } }, tokenC);
+  check('username rename succeeds', renamed.username === newHandle, JSON.stringify(renamed));
+  const oldResolves = await gql(`query Q($u:String!){user(username:$u){id}}`, { u: uC }, tokenC);
+  const newResolves = await gql(`query Q($u:String!){user(username:$u){id}}`, { u: newHandle }, tokenC);
+  check('old handle no longer resolves', oldResolves.user === null, JSON.stringify(oldResolves));
+  check('new handle resolves', newResolves.user?.id === userCId);
+
+  let takenErr = false;
+  try { await gql(`mutation U($input:UpdateProfileInput!){updateProfile(input:$input){username}}`, { input: { username: uA } }, tokenC); } catch { takenErr = true; }
+  check('rename to taken handle rejected', takenErr);
+  let takenCaseErr = false;
+  try { await gql(`mutation U($input:UpdateProfileInput!){updateProfile(input:$input){username}}`, { input: { username: uA.toUpperCase() } }, tokenC); } catch { takenCaseErr = true; }
+  check('rename to case-variant taken handle rejected', takenCaseErr);
+  let badFormatErr = false;
+  try { await gql(`mutation U($input:UpdateProfileInput!){updateProfile(input:$input){username}}`, { input: { username: 'bad handle!' } }, tokenC); } catch { badFormatErr = true; }
+  check('rename to invalid format rejected', badFormatErr);
+
+  // --- Account management: change password ---
+  let wrongCurrent = false;
+  try { await gql(`mutation CP($c:String!,$n:String!){changePassword(currentPassword:$c,newPassword:$n)}`, { c: 'wrongpassword', n: 'newpassword456' }, tokenC); } catch { wrongCurrent = true; }
+  check('changePassword rejects wrong current password', wrongCurrent);
+  const changedPw = await gql(`mutation CP($c:String!,$n:String!){changePassword(currentPassword:$c,newPassword:$n)}`, { c: 'password123', n: 'newpassword456' }, tokenC);
+  check('changePassword succeeds with correct current', changedPw.changePassword === true);
+  const relogin = await gql(
+    `mutation L($email:String!,$password:String!){login(email:$email,password:$password){token user{id}}}`,
+    { email: `${uC}@test.com`, password: 'newpassword456' }, tokenC);
+  check('login works with new password', !!relogin.login?.token);
+
+  // --- Account management: delete account ---
+  const delPost = await gql(
+    `mutation C($input:CreatePostInput!){createPost(input:$input){id hashtags}}`,
+    { input: { content: `delete me ${ts} #deltag`, hashtags: ['deltag'], mediaUrls: [] } }, tokenC);
+  check('delete-account pre-post created', !!delPost.createPost.id);
+  let delNoPw = false;
+  try { await gql(`mutation D($p:String){deleteAccount(password:$p)}`, { p: null }, tokenC); } catch { delNoPw = true; }
+  check('deleteAccount requires password', delNoPw);
+  let delWrongPw = false;
+  try { await gql(`mutation D($p:String){deleteAccount(password:$p)}`, { p: 'wrongpassword' }, tokenC); } catch { delWrongPw = true; }
+  check('deleteAccount rejects wrong password', delWrongPw);
+  const deleted = await gql(`mutation D($p:String){deleteAccount(password:$p)}`, { p: 'newpassword456' }, tokenC);
+  check('deleteAccount succeeds', deleted.deleteAccount === true);
+  const gone = await gql(`query Q($u:String!){user(username:$u){id}}`, { u: newHandle }, tokenA);
+  check('deleted user no longer resolves', gone.user === null, JSON.stringify(gone));
+  const delTag = await gql(`query T($q:String!){searchHashtags(query:$q){name postCount}}`, { q: 'deltag' }, tokenA);
+  check('hashtag count decremented after account delete', delTag.searchHashtags.length === 0 || delTag.searchHashtags[0].postCount === 0, JSON.stringify(delTag.searchHashtags));
+
   console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`);
   process.exit(failures === 0 ? 0 : 1);
 }
