@@ -615,7 +615,7 @@ export default function MessagesPage() {
                       {sendingMessage ? (
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                       ) : (
-                        <Icons.Send className="h-3 w-3" />
+                        <Icons.Send className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
