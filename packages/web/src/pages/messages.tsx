@@ -91,6 +91,9 @@ const GET_USER = gql`
 
 const CONVERSATIONS_LIMIT = 50;
 
+// Pause longer than this between same-sender messages surfaces the timestamp/read mark again
+const META_GAP_MS = 3 * 60 * 1000;
+
 export default function MessagesPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -281,14 +284,19 @@ export default function MessagesPage() {
   }, [lastRefresh]);
 
   const groupedMessages = useMemo(() => {
-    const groups: { label: string; items: any[] }[] = [];
-    for (const m of messages) {
+    const groups: { label: string; items: { message: any; showMeta: boolean }[] }[] = [];
+    messages.forEach((m: any, idx: number) => {
       const d = new Date(m.createdAt);
       const label = isSameDay(d, new Date()) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'MMMM d, yyyy');
+      const next = messages[idx + 1];
+      const showMeta =
+        !next ||
+        next.sender.id !== m.sender.id ||
+        new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime() > META_GAP_MS;
       const last = groups[groups.length - 1];
-      if (last && last.label === label) last.items.push(m);
-      else groups.push({ label, items: [m] });
-    }
+      if (last && last.label === label) last.items.push({ message: m, showMeta });
+      else groups.push({ label, items: [{ message: m, showMeta }] });
+    });
     return groups;
   }, [messages]);
 
@@ -301,20 +309,9 @@ export default function MessagesPage() {
       <PageHeader
         title="Messages"
         subtitle={totalUnread > 0 ? `${totalUnread} unread conversations` : undefined}
-        actions={
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setNewChatOpen((o) => !o)}
-            className="gap-1.5"
-          >
-            <Icons.Send className="h-4 w-4" />
-            <span className="hidden sm:inline">New</span>
-          </Button>
-        }
       />
 
-      <div className="h-[calc(100dvh-12.5rem)] min-h-[26rem] overflow-hidden rounded-row border border-line bg-surface shadow-card sm:h-[min(640px,76vh)] lg:h-[calc(100dvh-6.75rem)] lg:min-h-[480px]">
+      <div className="h-[calc(100dvh-12.5rem)] min-h-[26rem] overflow-hidden rounded-row border border-line bg-surface shadow-card sm:h-[min(640px,76vh)] lg:h-[calc(100dvh-5.5rem)] lg:min-h-[480px]">
         <div className="flex h-full">
           {/* Conversations List */}
           <aside
@@ -574,17 +571,14 @@ export default function MessagesPage() {
                       <div key={group.label}>
                         <DayDivider label={group.label} />
                         <div className="space-y-3">
-                          {group.items.map((msg: any, i: number) => {
-                            const isMine = msg.sender.id === user?.id;
-                            const showAvatar =
-                              !isMine &&
-                              (i === 0 || group.items[i - 1].sender.id !== msg.sender.id);
+                          {group.items.map(({ message, showMeta }: any) => {
+                            const isMine = message.sender.id === user?.id;
                             return (
                               <ChatBubble
-                                key={msg.id}
-                                message={msg}
+                                key={message.id}
+                                message={message}
                                 isMine={isMine}
-                                showAvatar={showAvatar}
+                                showMeta={showMeta}
                               />
                             );
                           })}
