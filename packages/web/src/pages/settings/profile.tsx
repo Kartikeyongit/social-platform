@@ -64,7 +64,7 @@ export default function EditProfilePage() {
       if (newUsername && newUsername !== prevUsername.current) {
         router.replace(`/profile/${newUsername}`);
       } else {
-        router.back();
+        handleBack();
       }
       toast.success('Profile updated!');
     },
@@ -100,6 +100,11 @@ export default function EditProfilePage() {
   }, [username, usernameIsCurrent, usernameFormatValid, checkUsername]);
 
   const availability = usernameIsCurrent ? null : availData?.usernameAvailable;
+
+  const handleBack = () => {
+    if ((window.history.length ?? 0) > 1) router.back();
+    else router.push('/home');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +168,7 @@ export default function EditProfilePage() {
     <div className="mx-auto w-full max-w-xl space-y-6">
       <PageHeader
         back
-        onBack={() => router.back()}
+        onBack={handleBack}
         title="Edit Profile"
         subtitle="Update your profile information"
       />
