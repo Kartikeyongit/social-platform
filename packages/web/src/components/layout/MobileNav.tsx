@@ -217,9 +217,6 @@ export const MobileNav: React.FC = () => {
           })}
         </div>
       </div>
-
-      <div className="h-16 lg:hidden" />
-      <div className="h-20 pb-[env(safe-area-inset-bottom)] lg:hidden" />
     </>
   );
 };
