@@ -102,8 +102,7 @@ export default function EditProfilePage() {
   const availability = usernameIsCurrent ? null : availData?.usernameAvailable;
 
   const handleBack = () => {
-    if ((window.history.length ?? 0) > 1) router.back();
-    else router.push('/home');
+    router.replace(user?.username ? `/profile/${user.username}` : '/home');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
