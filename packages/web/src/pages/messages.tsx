@@ -603,7 +603,7 @@ export default function MessagesPage() {
                       onChange={handleComposerChange}
                       onKeyDown={handleComposerKeyDown}
                       placeholder="Type a message..."
-                      className="max-h-[132px] min-h-[44px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed text-ink placeholder:text-muted focus:outline-none scrollbar-hide"
+                      className="max-h-[132px] min-h-[35px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed text-ink placeholder:text-muted focus:outline-none scrollbar-hide"
                     />
                     <Button
                       type="submit"
