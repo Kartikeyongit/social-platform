@@ -98,11 +98,14 @@ export default function MessagesPage() {
   const [messageInput, setMessageInput] = useState('');
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [listFilter, setListFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const composerFormRef = useRef<HTMLFormElement>(null);
 
   const {
     data: convData,
@@ -227,8 +230,55 @@ export default function MessagesPage() {
     }
   };
 
-  const conversations = convData?.conversations || [];
-  const messages = messagesData?.messages?.edges?.map((e: any) => e.node) || [];
+  const conversations = useMemo(() => convData?.conversations || [], [convData]);
+  const messages = useMemo(
+    () => messagesData?.messages?.edges?.map((e: any) => e.node) || [],
+    [messagesData],
+  );
+
+  const filteredConversations = useMemo(() => {
+    const q = listFilter.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c: any) =>
+      c.user.displayName.toLowerCase().includes(q) ||
+      c.user.username.toLowerCase().includes(q) ||
+      (c.lastMessage?.content || '').toLowerCase().includes(q),
+    );
+  }, [listFilter, conversations]);
+
+  // Auto-grow the composer up to ~4 lines
+  const autoResizeComposer = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 130)}px`;
+  };
+
+  const handleComposerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessageInput(e.target.value);
+    autoResizeComposer(e.target);
+  };
+
+  const handleComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      composerFormRef.current?.requestSubmit();
+    }
+  };
+
+  // Focus the composer on mobile whenever a chat is opened
+  useEffect(() => {
+    if (!selectedUser) return;
+    if (window.matchMedia('(max-width: 639px)').matches) {
+      const t = setTimeout(() => composerRef.current?.focus(), 250);
+      return () => clearTimeout(t);
+    }
+  }, [selectedUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset composer height once a message is sent
+  useEffect(() => {
+    if (lastRefresh && composerRef.current) {
+      composerRef.current.style.height = 'auto';
+    }
+  }, [lastRefresh]);
 
   const groupedMessages = useMemo(() => {
     const groups: { label: string; items: any[] }[] = [];
@@ -247,7 +297,7 @@ export default function MessagesPage() {
   const shouldShowList = !selectedUser;
 
   return (
-    <div className="flex h-full mx-auto w-full max-w-6xl flex-col">
+    <div className="mx-auto flex h-full w-full flex-col">
       <PageHeader
         title="Messages"
         subtitle={totalUnread > 0 ? `${totalUnread} unread conversations` : undefined}
@@ -259,12 +309,12 @@ export default function MessagesPage() {
             className="gap-1.5"
           >
             <Icons.Send className="h-4 w-4" />
-            New
+            <span className="hidden sm:inline">New</span>
           </Button>
         }
       />
 
-      <div className="h-[calc(100dvh-12.5rem)] min-h-[26rem] overflow-hidden rounded-row border border-line bg-surface shadow-card sm:h-[min(680px,74vh)]">
+      <div className="h-[calc(100dvh-12.5rem)] min-h-[26rem] overflow-hidden rounded-row border border-line bg-surface shadow-card sm:h-[min(640px,76vh)] lg:h-[calc(100dvh-6.75rem)] lg:min-h-[480px]">
         <div className="flex h-full">
           {/* Conversations List */}
           <aside
@@ -330,12 +380,44 @@ export default function MessagesPage() {
                 </div>
               )}
 
-              <button
-                onClick={() => setNewChatOpen((o) => !o)}
-                className="flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-surface-2"
-              >
-                Conversations
-              </button>
+              <div className="flex items-center justify-between px-1">
+                <button
+                  onClick={() => setNewChatOpen((o) => !o)}
+                  className="flex items-center gap-2 text-sm font-bold text-ink transition-colors hover:text-brand-600"
+                >
+                  <Icons.Messages className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+                  Conversations
+                </button>
+                <button
+                  onClick={() => setNewChatOpen((o) => !o)}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                    newChatOpen
+                      ? 'bg-surface-2 text-ink hover:bg-surface'
+                      : 'bg-brand-600 text-white hover:bg-brand-700',
+                  )}
+                  aria-expanded={newChatOpen}
+                >
+                  {newChatOpen ? <Icons.Back className="h-3.5 w-3.5" /> : <Icons.Send className="h-3.5 w-3.5" />}
+                  <span className="hidden sm:inline">{newChatOpen ? 'Close' : 'New'}</span>
+                </button>
+              </div>
+
+              {conversations.length > 0 && (
+                <div className="relative mt-2.5">
+                  <Icons.Search
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted"
+                  />
+                  <input
+                    type="text"
+                    value={listFilter}
+                    onChange={(e) => setListFilter(e.target.value)}
+                    placeholder="Search conversations..."
+                    className="input-premium py-2 pl-9"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto scrollbar-hide">
@@ -360,10 +442,15 @@ export default function MessagesPage() {
                     action={{ label: 'Find people', href: '/explore' }}
                   />
                 </div>
+              ) : filteredConversations.length === 0 ? (
+                <div className="p-6">
+                  <p className="text-center text-sm text-muted">No conversations match your search.</p>
+                </div>
               ) : (
                 <div className="space-y-0.5 p-2">
-                  {conversations.map((conv: any) => {
+                  {filteredConversations.map((conv: any) => {
                     const isActive = selectedUser?.id === conv.user.id;
+                    const unread = conv.unreadCount || 0;
                     const last = conv.lastMessage;
                     const preview = last?.content?.length > 40 ? `${last.content.slice(0, 40)}…` : (last?.content || '');
                     const isMine = last?.sender?.id === user?.id;
@@ -372,10 +459,16 @@ export default function MessagesPage() {
                         key={conv.user.id}
                         onClick={() => openConversation(conv)}
                         className={cn(
-                          'flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors duration-200',
-                          isActive ? 'bg-surface-2' : 'hover:bg-surface-2/60',
+                          'relative flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors duration-200',
+                          isActive
+                            ? 'bg-brand-50/70 dark:bg-brand-900/15'
+                            : 'hover:bg-surface-2/70',
                         )}
+                        aria-current={isActive ? 'page' : undefined}
                       >
+                        {isActive && (
+                          <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-brand-600" />
+                        )}
                         <Avatar
                           name={conv.user.displayName}
                           username={conv.user.username}
@@ -385,21 +478,33 @@ export default function MessagesPage() {
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="truncate text-sm font-semibold text-ink">{conv.user.displayName}</span>
+                            <span className="truncate text-sm font-semibold text-ink">
+                              {conv.user.displayName}
+                            </span>
                             {last && (
-                              <span className="flex-shrink-0 text-[11px] text-muted">
+                              <span
+                                className={cn(
+                                  'flex-shrink-0 text-[11px]',
+                                  unread > 0 ? 'font-semibold text-brand-600 dark:text-brand-400' : 'text-muted',
+                                )}
+                              >
                                 {formatDistanceToNow(new Date(last.createdAt), { addSuffix: true })}
                               </span>
                             )}
                           </div>
                           <div className="mt-0.5 flex items-center justify-between gap-2">
-                            <span className="truncate text-xs text-muted">
+                            <span
+                              className={cn(
+                                'truncate text-xs',
+                                unread > 0 ? 'font-medium text-ink/90' : 'text-muted',
+                              )}
+                            >
                               {isMine && <span className="text-brand-500">You: </span>}
                               {preview}
                             </span>
-                            {conv.unreadCount > 0 && (
+                            {unread > 0 && (
                               <span className="flex h-[18px] min-w-[18px] flex-shrink-0 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
-                                {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                                {unread > 99 ? '99+' : unread}
                               </span>
                             )}
                           </div>
@@ -445,7 +550,7 @@ export default function MessagesPage() {
                   </Link>
                 </div>
 
-                <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-4 sm:px-6">
+                <div className="flex-1 overflow-y-auto scrollbar-hide bg-[radial-gradient(120%_60%_at_50%_0%,rgba(99,102,241,0.06),transparent_70%)] px-4 py-4 sm:px-6">
                   {messagesLoading ? (
                     <div className="flex h-full items-center justify-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
@@ -490,27 +595,35 @@ export default function MessagesPage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <form onSubmit={handleSend} className="flex flex-shrink-0 items-center gap-2 border-t border-line p-3">
-                  <input
-                    type="text"
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    placeholder="Type a message..."
-                    className="input-premium flex-1"
-                  />
-                  <Button
-                    type="submit"
-                    size="md"
-                    disabled={!messageInput.trim() || sendingMessage}
-                    className="px-3.5"
-                    aria-label="Send message"
-                  >
-                    {sendingMessage ? (
-                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                    ) : (
-                      <Icons.Send className="h-5 w-5" />
-                    )}
-                  </Button>
+                <form
+                  ref={composerFormRef}
+                  onSubmit={handleSend}
+                  className="flex flex-shrink-0 items-end gap-2 border-t border-line bg-surface p-3"
+                >
+                  <div className="flex min-w-0 flex-1 items-end rounded-2xl border-2 border-line bg-surface-2 p-1.5 transition-colors duration-200 focus-within:border-brand-500/50 focus-within:bg-surface">
+                    <textarea
+                      ref={composerRef}
+                      rows={1}
+                      value={messageInput}
+                      onChange={handleComposerChange}
+                      onKeyDown={handleComposerKeyDown}
+                      placeholder="Type a message..."
+                      className="max-h-[130px] min-h-[40px] w-full resize-none bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:outline-none"
+                    />
+                    <Button
+                      type="submit"
+                      size="md"
+                      disabled={!messageInput.trim() || sendingMessage}
+                      className="px-3"
+                      aria-label="Send message"
+                    >
+                      {sendingMessage ? (
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                      ) : (
+                        <Icons.Send className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </>
             ) : (
