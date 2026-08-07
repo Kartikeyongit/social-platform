@@ -106,7 +106,7 @@ export default function MessagesPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<any>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const composerFormRef = useRef<HTMLFormElement>(null);
 
@@ -218,10 +218,10 @@ export default function MessagesPage() {
     }
   }, [messageInput, selectedUser, sendingMessage, sendMessage, refetch, refetchConversations]);
 
-  // Scroll to bottom on new messages
+  // Scroll the message pane to the bottom on new messages
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messagesData, lastRefresh]);
 
@@ -547,7 +547,10 @@ export default function MessagesPage() {
                   </Link>
                 </div>
 
-                <div className="flex-1 overflow-y-auto scrollbar-hide bg-[radial-gradient(120%_60%_at_50%_0%,rgba(99,102,241,0.06),transparent_70%)] px-4 py-4 sm:px-6">
+                <div
+                  ref={chatScrollRef}
+                  className="flex-1 overflow-y-auto scrollbar-hide bg-[radial-gradient(120%_60%_at_50%_0%,rgba(99,102,241,0.06),transparent_70%)] px-4 py-4 sm:px-6"
+                >
                   {messagesLoading ? (
                     <div className="flex h-full items-center justify-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
@@ -586,7 +589,6 @@ export default function MessagesPage() {
                       </div>
                     ))
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
 
                 <form
