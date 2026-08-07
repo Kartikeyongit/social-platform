@@ -94,6 +94,9 @@ const CONVERSATIONS_LIMIT = 50;
 // Pause longer than this between same-sender messages surfaces the timestamp/read mark again
 const META_GAP_MS = 3 * 60 * 1000;
 
+// Auto-grow cap for the composer (~4 lines)
+const COMPOSER_MAX_HEIGHT_PX = 132;
+
 export default function MessagesPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -252,7 +255,7 @@ export default function MessagesPage() {
   // Auto-grow the composer up to ~4 lines
   const autoResizeComposer = (el: HTMLTextAreaElement) => {
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 130)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT_PX)}px`;
   };
 
   const handleComposerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -267,9 +270,10 @@ export default function MessagesPage() {
     }
   };
 
-  // Focus the composer on mobile whenever a chat is opened
+  // Focus the composer on mobile whenever a chat is opened, and normalize its height
   useEffect(() => {
     if (!selectedUser) return;
+    if (composerRef.current) autoResizeComposer(composerRef.current);
     if (window.matchMedia('(max-width: 639px)').matches) {
       const t = setTimeout(() => composerRef.current?.focus(), 250);
       return () => clearTimeout(t);
@@ -599,7 +603,7 @@ export default function MessagesPage() {
                       onChange={handleComposerChange}
                       onKeyDown={handleComposerKeyDown}
                       placeholder="Type a message..."
-                      className="max-h-[130px] min-h-[40px] w-full resize-none bg-transparent px-2 py-1.5 text-sm text-ink placeholder:text-muted focus:outline-none"
+                      className="max-h-[132px] min-h-[44px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed text-ink placeholder:text-muted focus:outline-none scrollbar-hide"
                     />
                     <Button
                       type="submit"
@@ -609,9 +613,9 @@ export default function MessagesPage() {
                       aria-label="Send message"
                     >
                       {sendingMessage ? (
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                       ) : (
-                        <Icons.Send className="h-3 w-3" />
+                        <Icons.Send className="h-5 w-5" />
                       )}
                     </Button>
                   </div>
