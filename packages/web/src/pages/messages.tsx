@@ -592,7 +592,7 @@ export default function MessagesPage() {
                                 isFirst={isFirst}
                                 isLast={isLast}
                                 showMeta={showMeta}
-                                className={idx === 0 ? undefined : isFirst ? 'mt-3' : 'mt-1'}
+                                className={idx === 0 ? undefined : isFirst ? 'mt-3' : 'mt-0.5'}
                               />
                             );
                           })}

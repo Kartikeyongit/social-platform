@@ -33,12 +33,12 @@ const getBubbleCorners = (isMine: boolean, isFirst: boolean, isLast: boolean): s
     ? isFirst
       ? 'rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none'
       : isLast
-        ? 'rounded-tl-2xl rounded-bl-2xl rounded-tr-none rounded-br-md'
+        ? 'rounded-tl-2xl rounded-bl-2xl rounded-tr-none rounded-br-2xl'
         : 'rounded-tl-2xl rounded-bl-2xl rounded-tr-none rounded-br-none'
     : isFirst
       ? 'rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-none'
       : isLast
-        ? 'rounded-tr-2xl rounded-br-2xl rounded-tl-none rounded-bl-md'
+        ? 'rounded-tr-2xl rounded-br-2xl rounded-tl-none rounded-bl-2xl'
         : 'rounded-tr-2xl rounded-br-2xl rounded-tl-none rounded-bl-none';
 };
 
