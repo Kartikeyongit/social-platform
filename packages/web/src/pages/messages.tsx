@@ -609,9 +609,9 @@ export default function MessagesPage() {
                       aria-label="Send message"
                     >
                       {sendingMessage ? (
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
                       ) : (
-                        <Icons.Send className="h-5 w-5" />
+                        <Icons.Send className="h-3 w-3" />
                       )}
                     </Button>
                   </div>
