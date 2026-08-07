@@ -125,7 +125,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenNotifications }) => {
             username={user?.username}
             src={user?.avatarUrl}
             size="sm"
-            online
           />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-ink">

@@ -101,7 +101,6 @@ export const MobileNav: React.FC = () => {
                     username={user?.username}
                     src={user?.avatarUrl}
                     size="md"
-                    online
                   />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ink">

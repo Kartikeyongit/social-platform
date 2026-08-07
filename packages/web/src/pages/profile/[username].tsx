@@ -14,7 +14,7 @@ import { ProfileSkeleton } from '@/components/ui/Skeleton';
 import { PostCard } from '@/components/post/PostCard';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
-import { buttonClass } from '@/components/ui/Button';
+import { buttonClass, IconButton } from '@/components/ui/Button';
 import { fadeUp } from '@/utils/motion';
 
 const GET_USER = gql`
@@ -124,6 +124,11 @@ export default function ProfilePage() {
   const profileUser = data?.user;
   const posts = data?.userPosts?.edges?.map((edge: any) => edge.node) || [];
 
+  const handleBack = () => {
+    if ((window.history.length ?? 0) > 1) router.back();
+    else router.push('/home');
+  };
+
   if (!profileUser) {
     return (
       <div className="mx-auto w-full max-w-2xl">
@@ -157,6 +162,13 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
+      {/* Mobile-only back button (desktop has the persistent sidebar) */}
+      <div className="lg:hidden">
+        <IconButton label="Go back" onClick={handleBack} aria-label="Go back">
+          <Icons.Back className="h-5 w-5" />
+        </IconButton>
+      </div>
+
       {/* Profile Header */}
       <motion.div variants={fadeUp} initial="hidden" animate="visible">
         <Card className="p-6 sm:p-8">

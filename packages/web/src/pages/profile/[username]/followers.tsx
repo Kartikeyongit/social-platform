@@ -85,11 +85,16 @@ export default function FollowersPage() {
   const currentList = activeTab === 'followers' ? followers : following;
   const canView = isOwnPage || (Boolean(data?.user?.isFollowing) && Boolean(data?.user?.followsViewer));
 
+  const handleBack = () => {
+    if ((window.history.length ?? 0) > 1) router.back();
+    else router.push('/home');
+  };
+
   return (
     <div className="mx-auto w-full max-w-xl space-y-6">
       <PageHeader
         back
-        onBack={() => router.back()}
+        onBack={handleBack}
         title={`@${username}`}
         subtitle="Connections"
       />
