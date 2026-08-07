@@ -288,18 +288,27 @@ export default function MessagesPage() {
   }, [lastRefresh]);
 
   const groupedMessages = useMemo(() => {
-    const groups: { label: string; items: { message: any; showMeta: boolean }[] }[] = [];
+    const groups: {
+      label: string;
+      items: { message: any; showMeta: boolean; isFirst: boolean; isLast: boolean }[];
+    }[] = [];
     messages.forEach((m: any, idx: number) => {
       const d = new Date(m.createdAt);
       const label = isSameDay(d, new Date()) ? 'Today' : isYesterday(d) ? 'Yesterday' : format(d, 'MMMM d, yyyy');
+      const prev = messages[idx - 1];
       const next = messages[idx + 1];
-      const showMeta =
+      const isFirst =
+        !prev ||
+        prev.sender.id !== m.sender.id ||
+        new Date(m.createdAt).getTime() - new Date(prev.createdAt).getTime() > META_GAP_MS;
+      const isLast =
         !next ||
         next.sender.id !== m.sender.id ||
         new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime() > META_GAP_MS;
       const last = groups[groups.length - 1];
-      if (last && last.label === label) last.items.push({ message: m, showMeta });
-      else groups.push({ label, items: [{ message: m, showMeta }] });
+      if (last && last.label === label)
+        last.items.push({ message: m, showMeta: isLast, isFirst, isLast });
+      else groups.push({ label, items: [{ message: m, showMeta: isLast, isFirst, isLast }] });
     });
     return groups;
   }, [messages]);
@@ -572,15 +581,18 @@ export default function MessagesPage() {
                     groupedMessages.map((group) => (
                       <div key={group.label}>
                         <DayDivider label={group.label} />
-                        <div className="space-y-3">
-                          {group.items.map(({ message, showMeta }: any) => {
+                        <div>
+                          {group.items.map(({ message, showMeta, isFirst, isLast }: any, idx: number) => {
                             const isMine = message.sender.id === user?.id;
                             return (
                               <ChatBubble
                                 key={message.id}
                                 message={message}
                                 isMine={isMine}
+                                isFirst={isFirst}
+                                isLast={isLast}
                                 showMeta={showMeta}
+                                className={idx === 0 ? undefined : isFirst ? 'mt-3' : 'mt-1'}
                               />
                             );
                           })}

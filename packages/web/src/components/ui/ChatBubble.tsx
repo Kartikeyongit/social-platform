@@ -19,23 +19,43 @@ export interface ChatMessage {
 export interface ChatBubbleProps {
   message: ChatMessage;
   isMine: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
   showMeta?: boolean;
   className?: string;
 }
 
+const getBubbleCorners = (isMine: boolean, isFirst: boolean, isLast: boolean): string => {
+  if (isFirst && isLast) {
+    return isMine ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md';
+  }
+  return isMine
+    ? isFirst
+      ? 'rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-none'
+      : isLast
+        ? 'rounded-tl-2xl rounded-bl-2xl rounded-tr-none rounded-br-md'
+        : 'rounded-tl-2xl rounded-bl-2xl rounded-tr-none rounded-br-none'
+    : isFirst
+      ? 'rounded-tl-2xl rounded-tr-2xl rounded-br-2xl rounded-bl-none'
+      : isLast
+        ? 'rounded-tr-2xl rounded-br-2xl rounded-tl-none rounded-bl-md'
+        : 'rounded-tr-2xl rounded-br-2xl rounded-tl-none rounded-bl-none';
+};
+
 export const ChatBubble: React.FC<ChatBubbleProps> = ({
   message,
   isMine,
+  isFirst = true,
+  isLast = true,
   showMeta = false,
   className,
 }) => (
   <div className={cn('flex flex-col', isMine ? 'items-end' : 'items-start', className)}>
     <div
       className={cn(
-        'max-w-[85%] rounded-2xl px-4 py-2.5 shadow-soft sm:max-w-[70%]',
-        isMine
-          ? 'rounded-br-md bg-brand-600 text-white'
-          : 'rounded-bl-md bg-surface-2 text-ink',
+        'max-w-[85%] px-4 py-2.5 shadow-soft sm:max-w-[70%]',
+        getBubbleCorners(isMine, isFirst, isLast),
+        isMine ? 'bg-brand-600 text-white' : 'bg-surface-2 text-ink',
       )}
     >
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
