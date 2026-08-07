@@ -6,6 +6,7 @@ export interface NavItem {
   href: string;
   icon: (props: any) => React.ReactElement;
   notifications?: boolean;
+  messages?: boolean;
 }
 
 export interface NavGroup {
@@ -19,7 +20,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'home', label: 'Home', href: '/home', icon: Icons.Home },
       { id: 'explore', label: 'Explore', href: '/explore', icon: Icons.Explore },
-      { id: 'messages', label: 'Messages', href: '/messages', icon: Icons.Messages },
+      { id: 'messages', label: 'Messages', href: '/messages', icon: Icons.Messages, messages: true },
     ],
   },
   {

@@ -146,6 +146,7 @@ export const typeDefs = `#graphql
     # Messages
     conversations(limit: Int, cursor: String): [Conversation!]!
     messages(receiverId: ID!, limit: Int, cursor: String): MessageConnection!
+    unreadMessageCount: Int!
     
     # Notifications
     notifications(limit: Int, cursor: String): [Notification!]!

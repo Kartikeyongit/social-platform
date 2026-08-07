@@ -300,16 +300,11 @@ export default function MessagesPage() {
     return groups;
   }, [messages]);
 
-  const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
-
-  const shouldShowList = !selectedUser;
+    const shouldShowList = !selectedUser;
 
   return (
     <div className="mx-auto flex h-full w-full flex-col">
-      <PageHeader
-        title="Messages"
-        subtitle={totalUnread > 0 ? `${totalUnread} unread conversations` : undefined}
-      />
+      <PageHeader title="Messages" />
 
       <div className="h-[calc(100dvh-12.5rem)] min-h-[26rem] overflow-hidden rounded-row border border-line bg-surface shadow-card sm:h-[min(640px,76vh)] lg:h-[calc(100dvh-5.5rem)] lg:min-h-[480px]">
         <div className="flex h-full">

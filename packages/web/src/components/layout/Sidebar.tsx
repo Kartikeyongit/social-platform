@@ -12,6 +12,7 @@ import { cn } from '@/utils/cn';
 import { spring } from '@/utils/motion';
 import { NAV_GROUPS } from './nav';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 
 interface SidebarProps {
   onOpenNotifications?: () => void;
@@ -22,6 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenNotifications }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const unreadCount = useUnreadCount();
+  const unreadMessagesCount = useUnreadMessagesCount();
 
   const focusComposer = () => {
     router.push('/home');
@@ -56,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenNotifications }) => {
           {item.label}
         </span>
         {isNotif && unreadCount > 0 && <Badge count={unreadCount} />}
+        {item.messages && unreadMessagesCount > 0 && <Badge count={unreadMessagesCount} />}
         {isActive && (
           <motion.span
             layoutId="sidebar-pill"

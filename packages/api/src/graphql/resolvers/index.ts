@@ -329,6 +329,11 @@ export const resolvers = {
       if (!userId) return 0;
       return prisma.notification.count({ where: { userId, read: false } });
     },
+
+    unreadMessageCount: async (_: any, __: any, { userId }: Context) => {
+      if (!userId) return 0;
+      return prisma.message.count({ where: { receiverId: userId, read: false } });
+    },
     
     recommendedPosts: async (_: any, { limit = 10 }: any, { userId }: Context) => {
       if (!userId) throw new GraphQLError('Not authenticated');

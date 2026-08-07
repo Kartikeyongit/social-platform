@@ -12,6 +12,7 @@ import { cn } from '@/utils/cn';
 import { spring } from '@/utils/motion';
 import { NAV_GROUPS } from './nav';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 
 const bottomItems = [
   { id: 'home', label: 'Home', href: '/home', icon: Icons.Home },
@@ -27,6 +28,7 @@ export const MobileNav: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const unreadCount = useUnreadCount();
+  const unreadMessagesCount = useUnreadMessagesCount();
 
   const focusComposer = () => {
     router.push('/home');
@@ -142,6 +144,7 @@ export const MobileNav: React.FC = () => {
                             />
                             <span className="flex-1">{item.label}</span>
                             {item.notifications && unreadCount > 0 && <Badge count={unreadCount} />}
+                            {item.messages && unreadMessagesCount > 0 && <Badge count={unreadMessagesCount} />}
                           </Link>
                         );
                       })}
