@@ -27,7 +27,7 @@ export interface ChatBubbleProps {
 
 const getBubbleCorners = (isMine: boolean, isFirst: boolean, isLast: boolean): string => {
   if (isFirst && isLast) {
-    return isMine ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md';
+    return 'rounded-2xl';
   }
   return isMine
     ? isFirst
