@@ -60,6 +60,11 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPosted }) => {
     onCompleted: (d) => setSuggestions(d.suggestHashtags || []),
   });
 
+  const typedHashtags = content.match(/#(\w+)/g)?.map((t) => t.slice(1).toLowerCase()) || [];
+  const visibleSuggestions = suggestions.filter(
+    (tag) => !typedHashtags.includes(tag.toLowerCase()),
+  );
+
   useEffect(() => {
     if (content.length > 3) {
       const t = setTimeout(() => getSuggestions({ variables: { content } }), 600);
@@ -139,10 +144,10 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPosted }) => {
                   transition={{ duration: 0.18 }}
                   className="overflow-hidden"
                 >
-                  {suggestions.length > 0 && (
+                  {visibleSuggestions.length > 0 && (
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted">AI:</span>
-                      {suggestions.map(tag => (
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted">Suggestion:</span>
+                      {visibleSuggestions.map(tag => (
                         <button
                           key={tag}
                           type="button"

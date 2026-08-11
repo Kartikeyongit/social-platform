@@ -1,23 +1,58 @@
-// Simple AI-like suggestions based on content analysis
-const commonHashtags = [
-  'tech', 'coding', 'javascript', 'react', 'nextjs', 'webdev',
-  'design', 'ui', 'ux', 'startup', 'business', 'marketing',
-  'fitness', 'health', 'food', 'travel', 'photography', 'art',
-  'music', 'gaming', 'science', 'ai', 'ml', 'data',
-  'love', 'life', 'motivation', 'success', 'mindset'
-];
+// Hashtag suggestions based on hashtags previously used in the database
+import type { PrismaClient } from '@prisma/client';
 
-export function suggestHashtags(content: string): string[] {
-  const words = content.toLowerCase().split(/\W+/);
-  const suggestions: string[] = [];
-  
-  commonHashtags.forEach(tag => {
-    if (words.some(word => word.includes(tag) || tag.includes(word))) {
-      suggestions.push(tag);
-    }
+interface ScoredTag {
+  name: string;
+  score: number;
+}
+
+function extractWords(content: string): string[] {
+  return content
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((w) => w.length > 2);
+}
+
+export async function suggestHashtagsFromDb(
+  prisma: PrismaClient,
+  content: string,
+  limit = 5,
+): Promise<string[]> {
+  const words = extractWords(content);
+  if (words.length === 0) return [];
+
+  const existingTags = content.match(/#(\w+)/g)?.map((t) => t.slice(1).toLowerCase()) || [];
+
+  const candidates = await prisma.hashtag.findMany({
+    where: {
+      OR: [
+        { name: { contains: words[0], mode: 'insensitive' as const } },
+        ...words.slice(1).map((word) => ({ name: { contains: word, mode: 'insensitive' as const } })),
+      ],
+    },
+    orderBy: { postCount: 'desc' },
+    take: 50,
   });
-  
-  return [...new Set(suggestions)].slice(0, 5);
+
+  const scored: ScoredTag[] = [];
+  for (const tag of candidates) {
+    const name = tag.name.toLowerCase();
+    let best = 0;
+    for (const word of words) {
+      let matchScore = 0;
+      if (name === word) matchScore = 3;
+      else if (name.includes(word) || word.includes(name)) matchScore = 1;
+      if (matchScore > best) best = matchScore;
+    }
+    if (best > 0 && !existingTags.includes(name)) {
+      scored.push({ name: tag.name, score: best * 100 + Math.log10(tag.postCount + 1) });
+    }
+  }
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((s) => s.name);
 }
 
 export function analyzeSentiment(content: string): 'positive' | 'negative' | 'neutral' {

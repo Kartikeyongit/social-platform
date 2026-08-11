@@ -10,7 +10,7 @@ import {
   CreateCommentSchema,
   SendMessageSchema,
 } from '@social/shared';
-import { suggestHashtags } from '../../utils/aiSuggestions';
+import { suggestHashtagsFromDb } from '../../utils/aiSuggestions';
 import { signToken } from '../../utils/auth';
 import { isUsernameAvailable } from '../../utils/username';
 import { prisma } from '../../utils/db';
@@ -231,7 +231,7 @@ export const resolvers = {
     },
     
     suggestHashtags: async (_: any, { content }: { content: string }) => {
-      return suggestHashtags(content);
+      return suggestHashtagsFromDb(prisma, content);
     },
     
     conversations: async (_: any, { limit, cursor }: any, { userId }: Context) => {
